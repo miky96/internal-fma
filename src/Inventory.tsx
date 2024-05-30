@@ -175,12 +175,6 @@ const Inventory: React.FC = () => {
                   <IconButton edge="end" color="secondary" onClick={() => handleDeleteProduct(product.id)}>
                     <DeleteIcon />
                   </IconButton>
-                  <IconButton edge="end" color="primary" onClick={() => handleUpdateQuantity(product.id, product.quantity + 1)}>
-                    <AddIcon />
-                  </IconButton>
-                  <IconButton edge="end" color="primary" onClick={() => handleUpdateQuantity(product.id, product.quantity - 1)}>
-                    <RemoveIcon />
-                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
