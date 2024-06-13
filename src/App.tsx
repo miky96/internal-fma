@@ -1,73 +1,31 @@
-import React, { useState } from 'react';
-import { AppBar, Toolbar, Typography, IconButton, Container, Drawer, List, ListItem, ListItemText, Box, ListItemButton } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import { Route, Routes, Link, useNavigate } from 'react-router-dom';
-import Home from './Home';
-import Inventory from './Inventory';
-import AddTicket from './AddTicket';
-import ViewTickets from './ViewTickets';
 
-const App: React.FC = () => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const navigate = useNavigate();
+import { useContext, useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
+import { AuthContext } from './context/AuthContext'
+import Home from './routes/Home'
+import MainPage from './routes/MainPage'
 
-  const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
-    if (
-      event.type === 'keydown' &&
-      ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')
-    ) {
-      return;
+function App() {
+  const { currentUser } = useContext(AuthContext)
+  const navigate = useNavigate()
+
+  // NOTE: console log for testing purposes
+  console.log('User:', !!currentUser);
+
+  // Check if the current user exists on the initial render.
+  useEffect(() => {
+    if (currentUser) {
+      console.log(currentUser.email)
+      navigate('/mainpage')
     }
-    setDrawerOpen(open);
-  };
-
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setDrawerOpen(false);
-  };
+  }, [currentUser])
 
   return (
-    <div>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" aria-label="menu" onClick={toggleDrawer(true)}>
-            <MenuIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-      <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
-        <Box
-          role="presentation"
-          onClick={toggleDrawer(false)}
-          onKeyDown={toggleDrawer(false)}
-          style={{ width: 250 }}
-        >
-          <List>
-            <ListItemButton onClick={() => handleNavigation('/')}>
-              <ListItemText primary="Pàgina principal" />
-            </ListItemButton>
-            <ListItemButton onClick={() => handleNavigation('/inventory')}>
-              <ListItemText primary="Inventari" />
-            </ListItemButton>
-            <ListItemButton onClick={() => handleNavigation('/add-ticket')}>
-              <ListItemText primary=" Afegir Tickets" />
-            </ListItemButton>
-            <ListItemButton onClick={() => handleNavigation('/view-ticket')}>
-              <ListItemText primary="Veure Tickets" />
-            </ListItemButton>
-          </List>
-        </Box>
-      </Drawer>
-      <Container>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/add-ticket" element={<AddTicket />} />
-          <Route path="/view-ticket" element={<ViewTickets />} />
-        </Routes>
-      </Container>
-    </div>
-  );
-};
+    <Routes>
+      <Route index element={<Home />} />
+      <Route path="mainpage/*" element={currentUser ? <MainPage /> : <Home />} />
+    </Routes>
+  )
+}
 
 export default App;

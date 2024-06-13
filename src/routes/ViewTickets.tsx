@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from './firebaseSetup';
+import { db } from '../firebase/firebaseSetup';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, Snackbar, Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { format } from 'date-fns';
+import { AuthContext } from '../context/AuthContext';
+import { AggregatedData, Ticket } from '../model/ticket';
 
-interface Ticket {
-  id: string;
-  products: { id: number; name: string; quantity: number; price: number }[];
-  total: number;
-  createdAt: { seconds: number; nanoseconds: number };
-}
 
-interface AggregatedData {
-  date: string;
-  products: { [productName: string]: number };
-}
 
 const ViewTickets: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -26,6 +18,7 @@ const ViewTickets: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const { currentUser } = useContext(AuthContext);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -113,12 +106,15 @@ const ViewTickets: React.FC = () => {
                     </div>
                   ))}
                 </TableCell>
-                <TableCell>${ticket.total}</TableCell>
+                <TableCell>€{ticket.total}</TableCell>
                 <TableCell>{format(new Date(ticket.createdAt.seconds * 1000), 'yyyy-MM-dd HH:mm')}</TableCell>
                 <TableCell>
-                  <IconButton edge="end" color="secondary" onClick={() => handleDeleteTicket(ticket.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+                  {currentUser?.email === "adminfma@gmail.com" && (
+                    <IconButton edge="end" color="secondary" onClick={() => handleDeleteTicket(ticket.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  )}
+
                 </TableCell>
               </TableRow>
             ))}
@@ -133,7 +129,7 @@ const ViewTickets: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Date</TableCell>
+                <TableCell>Data</TableCell>
                 {Array.from(new Set(tickets.flatMap(ticket => ticket.products.map(product => product.name)))).map(productName => (
                   <TableCell key={productName}>{productName}</TableCell>
                 ))}

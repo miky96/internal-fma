@@ -6,3 +6,44 @@ export interface Product {
   createdAt: { seconds: number; nanoseconds: number };
   updatedAt: { seconds: number; nanoseconds: number };
 }
+
+export const Makro = [
+  "Pa bimbo",
+  "Formatge",
+  "Pernil dolç"
+];
+export const Alcohol = [
+  "Barril cervesa",
+  "Ginebra Beefeater",
+  "Ron Negrita",
+  "Whiskey Ballantines",
+  "Vodka Smirnoff",
+  "Baileys",
+  "Licor herbes",
+  "Licor d'arròs",
+  "Ratafia",
+  "Patxaran Etxeco",
+  "Moscatell",
+  "Vi blanc",
+  "Vi negre",
+  "Vermut",
+];
+
+export const OtherProducts = [
+  "Freedam",
+  "CCola 2L",
+  "CCola zero 2L",
+  "CCola sense cafeina",
+  "Fanta taronja 2L",
+  "Fanta llimona 2L",
+  "Limon Nada",
+  "Suc taronja",
+  "Suc pressec",
+  "Suc pinya",
+  "Schweepes 1L",
+  "Gots nets"
+];
+
+export const ProductNames = [
+...Makro, ...Alcohol, ...OtherProducts
+];
