@@ -6,7 +6,7 @@ import {
   TableHead, TableRow, Paper, IconButton, Snackbar, Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { AuthContext } from '../context/AuthContext';
 import { AggregatedData, Ticket } from '../model/ticket';
 
@@ -63,15 +63,25 @@ const ViewTickets: React.FC = () => {
     const data: { [date: string]: { [productName: string]: number } } = {};
 
     tickets.forEach(ticket => {
-      const date = format(new Date(ticket.createdAt.seconds * 1000), 'yyyy-MM-dd');
-      if (!data[date]) {
-        data[date] = {};
+      const ticketDate = new Date(ticket.createdAt.seconds * 1000);
+      let startOfDay = new Date(ticketDate);
+      startOfDay.setHours(5, 0, 0, 0);
+
+      if (ticketDate < startOfDay) {
+        startOfDay = addDays(startOfDay, -1);
       }
+
+      const dateKey = format(startOfDay, 'yyyy-MM-dd');
+
+      if (!data[dateKey]) {
+        data[dateKey] = {};
+      }
+
       ticket.products.forEach(product => {
-        if (!data[date][product.name]) {
-          data[date][product.name] = 0;
+        if (!data[dateKey][product.name]) {
+          data[dateKey][product.name] = 0;
         }
-        data[date][product.name] += product.quantity;
+        data[dateKey][product.name] += product.quantity;
       });
     });
 
@@ -86,7 +96,7 @@ const ViewTickets: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Veure Tickets
       </Typography>
-      <TableContainer component={Paper}>
+      {currentUser?.email === "adminfma@gmail.com" && (<TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -109,18 +119,15 @@ const ViewTickets: React.FC = () => {
                 <TableCell>€{ticket.total}</TableCell>
                 <TableCell>{format(new Date(ticket.createdAt.seconds * 1000), 'yyyy-MM-dd HH:mm')}</TableCell>
                 <TableCell>
-                  {currentUser?.email === "adminfma@gmail.com" && (
                     <IconButton edge="end" color="secondary" onClick={() => handleDeleteTicket(ticket.id)}>
                       <DeleteIcon />
                     </IconButton>
-                  )}
-
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </TableContainer>)}
       <Box mt={4} width="100%">
         <Typography variant="h5" gutterBottom>
           Productes diaris venguts

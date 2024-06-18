@@ -48,7 +48,7 @@ const MainPage: React.FC = () => {
             <ListItemButton onClick={() => handleNavigation('/mainpage')}>
               <ListItemText primary="Pàgina principal" />
             </ListItemButton>
-            {currentUser?.email === "inventarifma@gmail.com" || currentUser?.email === "adminfma@gmail.com" && (
+            {(currentUser?.email === "inventarifma@gmail.com" || currentUser?.email === "adminfma@gmail.com") && (
               <ListItemButton onClick={() => handleNavigation('/mainpage/inventory')}>
                 <ListItemText primary="Inventari" />
               </ListItemButton>
@@ -57,7 +57,7 @@ const MainPage: React.FC = () => {
               <ListItemText primary=" Afegir Tickets" />
             </ListItemButton>
 
-            {currentUser?.email === "inventarifma@gmail.com" || currentUser?.email === "economiafma@gmail.com" || currentUser?.email === "adminfma@gmail.com" && (
+            {(currentUser?.email === "inventarifma@gmail.com" || currentUser?.email === "economiafma@gmail.com" || currentUser?.email === "adminfma@gmail.com") && (
               <ListItemButton onClick={() => handleNavigation('/mainpage/view-ticket')}>
                 <ListItemText primary="Veure Tickets" />
               </ListItemButton>
