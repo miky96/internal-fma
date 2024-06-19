@@ -102,12 +102,12 @@ const Inventory: React.FC = () => {
         }]);
       }
 
-      setSnackbarMessage('Entry added/updated successfully!');
+      setSnackbarMessage('Producte inventari actualitzat correctament!');
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
       handleCloseDialog();
     } catch (error) {
-      console.error('Error saving the entry: ', error);
+      console.error('Error guardant entrada inventari: ', error);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     }
@@ -144,7 +144,6 @@ const Inventory: React.FC = () => {
               {category.map(name => (
                 <TableCell key={name}>{name}</TableCell>
               ))}
-              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -156,9 +155,6 @@ const Inventory: React.FC = () => {
                     {groupedEntries[date][name] || 0}
                   </TableCell>
                 ))}
-                <TableCell>
-                  {/* Add any additional actions here, such as delete */}
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -173,7 +169,7 @@ const Inventory: React.FC = () => {
         Inventari
       </Typography>
       <Button variant="contained" color="primary" onClick={handleOpenDialog}>
-      Afegeix o Actualitza
+        Actualitza quantitat
       </Button>
       {renderTable(Alcohol, 'Alcohol')}
       {renderTable(OtherProducts, 'Altres Productes')}
@@ -198,7 +194,7 @@ const Inventory: React.FC = () => {
           </Select>
           <TextField
             margin="dense"
-            label="Quantity"
+            label="Quantitat"
             type="number"
             fullWidth
             value={quantity}
@@ -207,7 +203,7 @@ const Inventory: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} color="secondary">
-            Cancel
+            Cancel·lar
           </Button>
           <Button onClick={handleSaveEntry} color="primary">
             Guarda

@@ -8,6 +8,7 @@ export interface Ticket {
 export interface AggregatedData {
   date: string;
   products: { [productName: string]: number };
+  totalMoney: number;
 }
 
 
