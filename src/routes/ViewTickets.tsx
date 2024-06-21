@@ -130,7 +130,7 @@ const ViewTickets: React.FC = () => {
                         {data.products[productName] || 0}
                       </TableCell>
                     ))}
-                  <TableCell>€{data.totalMoney.toFixed(2)}</TableCell>
+                  <TableCell>{data.totalMoney.toFixed(2)}€</TableCell>
                 </TableRow>
               ))}
             </TableBody>

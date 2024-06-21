@@ -19,7 +19,7 @@ const AddTicket: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
-  const [moneyReceived, setMoneyReceived] = useState<string>('0');
+  const [moneyReceived, setMoneyReceived] = useState<string>('');
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState<number | string>('');
@@ -114,7 +114,7 @@ const AddTicket: React.FC = () => {
   const calculateChange = () => {
     const total = parseFloat(calculateTotal());
 
-    if (Number.isNaN(moneyReceived)) {
+    if (Number.isNaN(moneyReceived) || moneyReceived === '') {
       return 0
     }
 
@@ -172,9 +172,29 @@ const AddTicket: React.FC = () => {
       </Button>
       )}
       <Box mt={4} width="100%">
-        <Typography variant="h5" gutterBottom>
-          Productes
-        </Typography>
+        <Box mt={2} display="flex" flexDirection="column" alignItems="flex-start">
+          <Typography variant="h6">
+            Total: {calculateTotal()} €
+          </Typography>
+          <TextField
+            label="Diners Rebuts"
+            type="number"
+            value={moneyReceived}
+            onChange={(e) => setMoneyReceived(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Canvi: {calculateChange()} €
+          </Typography>
+          <Button variant="contained" color="primary" onClick={handleSaveTicket} sx={{ mt: 2 }}>
+            Guardar Ticket
+          </Button>
+        </Box>
+        <Box mt={2}>
+          <Typography variant="h5" gutterBottom>
+            Productes
+          </Typography>
+        </Box>
         <Paper>
           <List>
             {ticketItems.map(item => (
@@ -191,7 +211,7 @@ const AddTicket: React.FC = () => {
                 />
                 <Box display="flex" alignItems="center">
                   <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'right' }}>
-                    €{(item.price * item.quantity)}
+                    {(item.price * item.quantity)} €
                   </Typography>
                   <IconButton edge="end" color="secondary" onClick={() => handleRemoveTicketItem(item.id)}>
                     <DeleteIcon sx={{ fontSize: 32 }} />
@@ -202,50 +222,32 @@ const AddTicket: React.FC = () => {
           </List>
         </Paper>
         <Grid container spacing={2} mt={2}>
-        {products.map(product => (
-          <Grid item xs={6} sm={4} md={3} key={product.id}>
-            <Paper
-              sx={{
-                padding: 1,
-                textAlign: 'center',
-                height: '200px', // Adjust height as necessary
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: 'auto' }} />
-              <Box sx={{ marginTop: 1, display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <Button variant="contained" color="primary" onClick={() => handleAddProductToTicket(product)}>
-                  <AddIcon />
-                </Button>
-                <Button variant="contained" color="secondary" onClick={() => handleRemoveProductToTicket(product)}>
-                  <RemoveIcon />
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-        <Box mt={2} display="flex" flexDirection="column" alignItems="flex-start">
-          <Typography variant="h6">
-            Total: €{calculateTotal()}
-          </Typography>
-          <TextField
-            label="Diners Rebuts"
-            type="number"
-            value={moneyReceived}
-            onChange={(e) => setMoneyReceived(e.target.value)}
-            sx={{ mt: 2 }}
-          />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Canvi: €{calculateChange()}
-          </Typography>
-          <Button variant="contained" color="primary" onClick={handleSaveTicket} sx={{ mt: 2 }}>
-            Guardar Ticket
-          </Button>
-        </Box>
+          {products.map(product => (
+            <Grid item xs={6} sm={4} md={3} key={product.id}>
+              <Paper
+                sx={{
+                  padding: 1,
+                  textAlign: 'center',
+                  height: '200px', // Adjust height as necessary
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: 'auto' }} />
+                <Box sx={{ marginTop: 1, display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <Button variant="contained" color="primary" onClick={() => handleAddProductToTicket(product)}>
+                    <AddIcon />
+                  </Button>
+                  <Button variant="contained" color="secondary" onClick={() => handleRemoveProductToTicket(product)}>
+                    <RemoveIcon />
+                  </Button>
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
       </Box>
       <Snackbar
         open={snackbarOpen}
