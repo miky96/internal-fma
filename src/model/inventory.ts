@@ -32,8 +32,7 @@ export const Alcohol = [
 export const OtherProducts = [
   "Freedam",
   "CCola 2L",
-  "CCola zero 2L",
-  "CCola sense cafeina",
+  "Daura",
   "Fanta taronja 2L",
   "Fanta llimona 2L",
   "Limon Nada",
@@ -41,7 +40,6 @@ export const OtherProducts = [
   "Suc pressec",
   "Suc pinya",
   "Schweepes 1L",
-  "Gots nets"
 ];
 
 export const ProductNames = [

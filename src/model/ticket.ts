@@ -14,6 +14,7 @@ export interface AggregatedData {
 
 export interface Product {
   id: string;
+  order_id: number;
   name: string;
   price: number;
   imageUrl: string;

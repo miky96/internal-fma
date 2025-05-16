@@ -23,6 +23,7 @@ const AddTicket: React.FC = () => {
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState<number | string>('');
+  const [newProductOrderId, setNewProductOrderId] = useState<number>(0);
   const [newProductImageUrl, setNewProductImageUrl] = useState('');
 
   useEffect(() => {
@@ -142,6 +143,7 @@ const AddTicket: React.FC = () => {
 
     try {
       const newProduct = {
+        order_id: newProductOrderId,
         name: newProductName,
         price: Number(newProductPrice),
         imageUrl: newProductImageUrl
@@ -161,6 +163,9 @@ const AddTicket: React.FC = () => {
       setSnackbarOpen(true);
     }
   };
+
+  const sortedProducts = [...products].sort((a, b) => a.order_id - b.order_id);
+  console.log(sortedProducts)
 
   return (
     <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
@@ -222,7 +227,7 @@ const AddTicket: React.FC = () => {
           </List>
         </Paper>
         <Grid container spacing={2} mt={2}>
-          {products.map(product => (
+          {sortedProducts.map(product => (
             <Grid item xs={6} sm={4} md={3} key={product.id}>
               <Paper
                 sx={{
@@ -282,6 +287,14 @@ const AddTicket: React.FC = () => {
             fullWidth
             value={newProductImageUrl}
             onChange={(e) => setNewProductImageUrl(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <TextField
+            label="Id ordre del producte"
+            type="number"
+            fullWidth
+            value={newProductOrderId}
+            onChange={(e) => setNewProductOrderId(parseInt(e.target.value))}
             sx={{ mt: 2 }}
           />
         </DialogContent>
