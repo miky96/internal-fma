@@ -1,0 +1,76 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "extends": [
+        "airbnb",
+        "airbnb-typescript",
+        "plugin:react/recommended",
+        "plugin:react-hooks/recommended"
+    ],
+    "parserOptions": {
+        "project": "./tsconfig.eslint.json"
+    },
+    "plugins": [
+        "react",
+        "react-hooks"
+    ],
+    "ignorePatterns": [
+        "aws-exports.js",
+        "endpoint-config.ts",
+        "build/"
+    ],
+    "rules": {
+        // We just like arrow-function components more I guess :shrug:
+        "react/function-component-definition": [
+            "error",
+            {
+                "namedComponents": "arrow-function",
+                "unnamedComponents": "arrow-function"
+            }
+        ],
+        /*
+         * At time of implementing ESLint on this project, all users seem to be checking out CRLF (windows-style) line breaks
+         * and committing unix-style line breaks. To avoid messing with current mantainers git settings, we disable the linebreak-style rule
+         */
+        "linebreak-style": [
+            "off"
+        ],
+        // We simply use this in a lot of places. Turning the rule off for now
+        "react/jsx-props-no-spreading": "off",
+        /*
+         * Being forced to use destructuring is dumb, as you often need to specifically mark Typescript
+         * definitions of certain props. Marking it as a warning instead of an error (default)
+         */
+        "react/destructuring-assignment": [
+            "warn"
+        ],
+        // Named exports give useful semantics, even when they are the only one in a file. I can't see why we should force default exports
+        "import/prefer-default-export": "off",
+        "implicit-arrow-linebreak": [
+            "warn"
+        ],
+        "no-param-reassign": [
+            "error",
+            {
+                "props": false
+            }
+        ],
+        // The default of 100 max line length is really annoying, nobody uses viewports this small anymore (not even when splitting views)
+        // PR: 140 - meh. that's ridiculous too - upped to 300
+        "max-len": [
+            "error",
+            300
+        ],
+        // PR: need this to be able to do a switch statement in Checkpoint
+        "no-nested-ternary": "off",
+        // PR: I don't see why we should enforce this, it's stupid
+        "react-hooks/rules-of-hooks": "warn",
+        /*
+         * Console logs are typically residues from dev flows that we forgot to remove, so we
+         * generally don't want them. Console errors in contrast are used purposefully in the project.
+         */
+        "no-console": ["error", { "allow": ["error"] }]
+    }
+}

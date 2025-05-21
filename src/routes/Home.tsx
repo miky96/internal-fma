@@ -1,16 +1,18 @@
-import React from 'react';
-import { ChangeEvent, FormEvent, useState } from 'react';
-import { Box, Button, TextField, Snackbar, Alert } from '@mui/material';
-import { signInUser } from '../firebase/firebase';
+import React, { ChangeEvent, FormEvent, useState } from 'react';
+
+import {
+  Box, Button, TextField, Snackbar, Alert,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import '.././App.css';
+import { signInUser } from '../firebase/firebase';
+import '../App.css';
 
 const defaultFormFields = {
   email: '',
   password: '',
 };
 
-function Home() {
+const Home = () => {
   const [formFields, setFormFields] = useState(defaultFormFields);
   const { email, password } = formFields;
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -21,8 +23,8 @@ function Home() {
     setFormFields(defaultFormFields);
   };
 
-  const handleSnackbarClose = (event: React.SyntheticEvent | Event, reason?: string) => {
-    if (reason === 'clickaway') {
+  const handleSnackbarClose = (_reason?: string) => {
+    if (_reason === 'clickaway') {
       return;
     }
     setSnackbarOpen(false);
@@ -43,7 +45,7 @@ function Home() {
         navigate('/mainpage');
       }
     } catch (error: any) {
-      console.log('El login ha fallat', error.message);
+      console.error('El login ha fallat', error.message);
       setSnackbarMessage(error.message);
       setSnackbarOpen(true);
     }
@@ -82,7 +84,7 @@ function Home() {
             name="password"
             value={password}
             onChange={handleChange}
-            autoComplete='password'
+            autoComplete="password"
             placeholder="Contrassenya"
             required
             label="Contrassenya"
@@ -102,14 +104,14 @@ function Home() {
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
-        onClose={handleSnackbarClose}
+        onClose={(_, reason) => handleSnackbarClose(reason)}
       >
-        <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+        <Alert onClose={() => handleSnackbarClose()} severity="error" sx={{ width: '100%' }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>
     </div>
   );
-}
+};
 
 export default Home;

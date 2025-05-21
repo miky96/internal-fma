@@ -5,7 +5,7 @@ import {
   signOut,
   signInWithEmailAndPassword,
   NextOrObserver,
-  User
+  User,
 } from 'firebase/auth';
 import { getFirebaseConfig } from './firebaseSetup';
 
@@ -14,7 +14,7 @@ const auth = getAuth(app);
 
 export const signInUser = async (
   email: string,
-  password: string
+  password: string,
 ) => {
   if (!email || !password) {
     return { error: 'Email and password are required' };
@@ -48,8 +48,6 @@ export const signInUser = async (
   }
 };
 
-export const userStateListener = (callback: NextOrObserver<User>) => {
-  return onAuthStateChanged(auth, callback)
-}
+export const userStateListener = (callback: NextOrObserver<User>) => onAuthStateChanged(auth, callback);
 
-export const SignOutUser = async () => await signOut(auth);
+export const SignOutUser = async () => signOut(auth);

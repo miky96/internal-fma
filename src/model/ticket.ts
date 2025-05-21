@@ -11,7 +11,6 @@ export interface AggregatedData {
   totalMoney: number;
 }
 
-
 export interface Product {
   id: string;
   order_id: number;

@@ -1,6 +1,6 @@
 # Build the React app
 build:
-	npm ci
+	npm ci --legacy-peer-deps
 	npm run build
 
 # Deploy to Firebase Hosting (requires you to be logged in with Firebase CLI)
