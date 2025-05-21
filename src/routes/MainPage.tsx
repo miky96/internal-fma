@@ -1,7 +1,19 @@
 import React, { useContext, useState } from 'react';
-import { AppBar, Toolbar, IconButton, Container, Drawer, List, ListItemText, Box, ListItemButton } from '@mui/material';
+import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Container,
+  Drawer,
+  List,
+  ListItemText,
+  Box,
+  ListItemButton,
+} from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Route, Routes, useNavigate, useLocation,
+} from 'react-router-dom';
 import Inventory from './Inventory';
 import AddTicket from './AddTicket';
 import ViewTickets from './ViewTickets';
@@ -15,8 +27,9 @@ const MainPage: React.FC = () => {
 
   const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
     if (
-      event.type === 'keydown' &&
-      ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')
+      event.type === 'keydown'
+        && ((event as React.KeyboardEvent).key === 'Tab'
+          || (event as React.KeyboardEvent).key === 'Shift')
     ) {
       return;
     }
@@ -32,7 +45,13 @@ const MainPage: React.FC = () => {
     <div>
       <AppBar position="static">
         <Toolbar>
-          <IconButton edge="start" color="inherit" aria-label="menu" onClick={toggleDrawer(true)}>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            onClick={toggleDrawer(true)}
+            size="large"
+          >
             <MenuIcon />
           </IconButton>
         </Toolbar>
@@ -42,23 +61,25 @@ const MainPage: React.FC = () => {
           role="presentation"
           onClick={toggleDrawer(false)}
           onKeyDown={toggleDrawer(false)}
-          style={{ width: 250 }}
+          sx={{ width: 250 }}
         >
           <List>
             <ListItemButton onClick={() => handleNavigation('/mainpage')}>
               <ListItemText primary="Pàgina principal" />
             </ListItemButton>
-            {currentUser?.email === "inventarifma@gmail.com" || currentUser?.email === "adminfma@gmail.com" && (
-              <ListItemButton onClick={() => handleNavigation('/mainpage/inventory')}>
+            {(currentUser?.email === 'inventarifma@gmail.com'
+              || currentUser?.email === 'adminfma@gmail.com') && (
+              <ListItemButton onClick={() => handleNavigation('inventory')}>
                 <ListItemText primary="Inventari" />
               </ListItemButton>
             )}
-            <ListItemButton onClick={() => handleNavigation('/mainpage/add-ticket')}>
-              <ListItemText primary=" Afegir Tickets" />
+            <ListItemButton onClick={() => handleNavigation('add-ticket')}>
+              <ListItemText primary="Afegir Tickets" />
             </ListItemButton>
-
-            {currentUser?.email === "inventarifma@gmail.com" || currentUser?.email === "economiafma@gmail.com" || currentUser?.email === "adminfma@gmail.com" && (
-              <ListItemButton onClick={() => handleNavigation('/mainpage/view-ticket')}>
+            {(currentUser?.email === 'inventarifma@gmail.com'
+              || currentUser?.email === 'economiafma@gmail.com'
+              || currentUser?.email === 'adminfma@gmail.com') && (
+              <ListItemButton onClick={() => handleNavigation('view-ticket')}>
                 <ListItemText primary="Veure Tickets" />
               </ListItemButton>
             )}
@@ -82,11 +103,14 @@ const MainPage: React.FC = () => {
           alignItems="center"
           minHeight="80vh"
         >
-          <img src="/logo.jpeg" alt="Logo" style={{ maxWidth: '100%', height: 'auto' }} />
+          <img
+            src="/logo.jpeg"
+            alt="Logo"
+            style={{ maxWidth: '100%', height: 'auto' }}
+          />
         </Box>
       )}
     </div>
-
   );
 };
 

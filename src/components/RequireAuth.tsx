@@ -1,10 +1,10 @@
-import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
-import { Navigate, useLocation } from "react-router-dom";
+import React, { useContext } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
-function RequireAuth({ children }: { children: JSX.Element }) {
-  const { currentUser } = useContext(AuthContext)
-  let location = useLocation()
+const RequireAuth = ({ children }: { children: JSX.Element }) => {
+  const { currentUser } = useContext(AuthContext);
+  const location = useLocation();
 
   if (!currentUser) {
     // Redirect the user to the home page.
@@ -13,6 +13,6 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   }
 
   return children;
-}
+};
 
-export default RequireAuth
+export default RequireAuth;

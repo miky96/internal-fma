@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/firebaseSetup';
+import {
+  collection, getDocs, addDoc, serverTimestamp,
+} from 'firebase/firestore';
 import {
   Box, Typography, Grid, Paper, Button, Snackbar, Alert,
   List, ListItem, ListItemText, IconButton,
-  TextField, Dialog, DialogActions, DialogContent, DialogTitle
+  TextField, Dialog, DialogActions, DialogContent, DialogTitle,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
+import { db } from '../firebase/firebaseSetup';
 import { AuthContext } from '../context/AuthContext';
 import { Product, TicketItem } from '../model/ticket';
 
@@ -19,22 +21,23 @@ const AddTicket: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
-  const [moneyReceived, setMoneyReceived] = useState<string>('0');
+  const [moneyReceived, setMoneyReceived] = useState<string>('');
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState<number | string>('');
+  const [newProductOrderId, setNewProductOrderId] = useState<number>(0);
   const [newProductImageUrl, setNewProductImageUrl] = useState('');
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const cachedProducts = localStorage.getItem('products_new');
+      const cachedProducts = localStorage.getItem('products');
       if (cachedProducts) {
         setProducts(JSON.parse(cachedProducts));
       } else {
         const querySnapshot = await getDocs(collection(db, 'ticket_products'));
-        const productsData = querySnapshot.docs.map(doc => ({
+        const productsData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         })) as Product[];
         setProducts(productsData);
         localStorage.setItem('products', JSON.stringify(productsData));
@@ -45,32 +48,27 @@ const AddTicket: React.FC = () => {
   }, []);
 
   const handleAddProductToTicket = (product: Product) => {
-    setTicketItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+    setTicketItems((prevItems) => {
+      const existingItem = prevItems.find((item) => item.id === product.id);
       if (existingItem) {
-        return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return prevItems.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
       }
+      return [...prevItems, { ...product, quantity: 1 }];
     });
   };
 
   const handleRemoveProductToTicket = (product: Product) => {
-    setTicketItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+    setTicketItems((prevItems) => {
+      const existingItem = prevItems.find((item) => item.id === product.id);
       if (existingItem && existingItem.quantity > 0) {
-        return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity - 1 } : item
-        ).filter(item => item.quantity > 0);
+        return prevItems.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity - 1 } : item)).filter((item) => item.quantity > 0);
       }
       return prevItems;
     });
   };
 
   const handleRemoveTicketItem = (itemId: string) => {
-    setTicketItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    setTicketItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
   };
 
   const handleSaveTicket = async () => {
@@ -107,15 +105,13 @@ const AddTicket: React.FC = () => {
     setSnackbarOpen(false);
   };
 
-  const calculateTotal = () => {
-    return ticketItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
-  };
+  const calculateTotal = () => ticketItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
 
   const calculateChange = () => {
     const total = parseFloat(calculateTotal());
 
-    if (Number.isNaN(moneyReceived)) {
-      return 0
+    if (moneyReceived === '' || Number.isNaN(Number(moneyReceived))) {
+      return 0;
     }
 
     return (parseFloat(moneyReceived) - total).toFixed(2);
@@ -142,9 +138,10 @@ const AddTicket: React.FC = () => {
 
     try {
       const newProduct = {
+        order_id: newProductOrderId,
         name: newProductName,
         price: Number(newProductPrice),
-        imageUrl: newProductImageUrl
+        imageUrl: newProductImageUrl,
       };
 
       const productRef = await addDoc(collection(db, 'ticket_products'), newProduct);
@@ -162,36 +159,88 @@ const AddTicket: React.FC = () => {
     }
   };
 
+  const sortedProducts = [...products].sort((a, b) => a.order_id - b.order_id);
+
   return (
     <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
       <Typography variant="h4" gutterBottom>
         Afegir Tickets
       </Typography>
-      {currentUser?.email === "adminfma@gmail.com" && (<Button variant="contained" color="primary" onClick={handleOpenAddProductDialog}>
-        Afegir Producte
-      </Button>
+      {currentUser?.email === 'adminfma@gmail.com' && (
+        <Button variant="contained" color="primary" onClick={handleOpenAddProductDialog}>
+          Afegir Producte
+        </Button>
       )}
       <Box mt={4} width="100%">
-        <Typography variant="h5" gutterBottom>
-          Productes
-        </Typography>
+        <Box mt={2} display="flex" flexDirection="column" alignItems="flex-start">
+          <Typography variant="h6">
+            Total:
+            {' '}
+            {calculateTotal()}
+            {' '}
+            €
+            <TextField
+              label="Diners Rebuts"
+              type="number"
+              value={moneyReceived}
+              onChange={(e) => setMoneyReceived(e.target.value)}
+              sx={{ mt: 2 }}
+              InputProps={{
+                inputProps: {
+                  step: 'any',
+                  style: { MozAppearance: 'textfield' },
+                },
+                inputMode: 'decimal',
+                // Hide arrows in Chrome, Safari, Edge, Opera
+                sx: {
+                  '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0,
+                  },
+                  '& input[type=number]': {
+                    MozAppearance: 'textfield',
+                  },
+                },
+              }}
+            />
+          </Typography>
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Canvi:
+            {' '}
+            {calculateChange()}
+            {' '}
+            €
+          </Typography>
+          <Button variant="contained" color="primary" onClick={handleSaveTicket} sx={{ mt: 2 }}>
+            Guardar Ticket
+          </Button>
+        </Box>
+        <Box mt={2}>
+          <Typography variant="h5" gutterBottom>
+            Productes
+          </Typography>
+        </Box>
         <Paper>
           <List>
-            {ticketItems.map(item => (
+            {ticketItems.map((item) => (
               <ListItem key={item.id} sx={{ display: 'flex', alignItems: 'center' }}>
                 <ListItemText
-                  primary={
+                  primary={(
                     <Box display="flex" alignItems="center">
                       <Typography variant="h6">{item.name}</Typography>
                       <Typography variant="h6" sx={{ marginLeft: 2 }}>
-                        ({item.quantity})
+                        (
+                        {item.quantity}
+                        )
                       </Typography>
                     </Box>
-                  }
+                  )}
                 />
                 <Box display="flex" alignItems="center">
                   <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'right' }}>
-                    €{(item.price * item.quantity)}
+                    {(item.price * item.quantity)}
+                    {' '}
+                    €
                   </Typography>
                   <IconButton edge="end" color="secondary" onClick={() => handleRemoveTicketItem(item.id)}>
                     <DeleteIcon sx={{ fontSize: 32 }} />
@@ -202,50 +251,35 @@ const AddTicket: React.FC = () => {
           </List>
         </Paper>
         <Grid container spacing={2} mt={2}>
-        {products.map(product => (
-          <Grid item xs={6} sm={4} md={3} key={product.id}>
-            <Paper
-              sx={{
-                padding: 1,
-                textAlign: 'center',
-                height: '200px', // Adjust height as necessary
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: 'auto' }} />
-              <Box sx={{ marginTop: 1, display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <Button variant="contained" color="primary" onClick={() => handleAddProductToTicket(product)}>
-                  <AddIcon />
-                </Button>
-                <Button variant="contained" color="secondary" onClick={() => handleRemoveProductToTicket(product)}>
-                  <RemoveIcon />
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-        <Box mt={2} display="flex" flexDirection="column" alignItems="flex-start">
-          <Typography variant="h6">
-            Total: €{calculateTotal()}
-          </Typography>
-          <TextField
-            label="Diners Rebuts"
-            type="number"
-            value={moneyReceived}
-            onChange={(e) => setMoneyReceived(e.target.value)}
-            sx={{ mt: 2 }}
-          />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Canvi: €{calculateChange()}
-          </Typography>
-          <Button variant="contained" color="primary" onClick={handleSaveTicket} sx={{ mt: 2 }}>
-            Guardar Ticket
-          </Button>
-        </Box>
+          {sortedProducts.map((product) => (
+            <Grid item xs={6} sm={4} md={3} key={product.id}>
+              <Paper
+                sx={{
+                  padding: 1,
+                  textAlign: 'center',
+                  height: '200px', // Adjust height as necessary
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: 'auto' }} />
+                <Box sx={{
+                  marginTop: 1, display: 'flex', justifyContent: 'space-between', width: '100%',
+                }}
+                >
+                  <Button variant="contained" color="primary" onClick={() => handleAddProductToTicket(product)}>
+                    <AddIcon />
+                  </Button>
+                  <Button variant="contained" color="secondary" onClick={() => handleRemoveProductToTicket(product)}>
+                    <RemoveIcon />
+                  </Button>
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
       </Box>
       <Snackbar
         open={snackbarOpen}
@@ -280,6 +314,14 @@ const AddTicket: React.FC = () => {
             fullWidth
             value={newProductImageUrl}
             onChange={(e) => setNewProductImageUrl(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <TextField
+            label="Id ordre del producte"
+            type="number"
+            fullWidth
+            value={newProductOrderId}
+            onChange={(e) => setNewProductOrderId(Number(e.target.value) || 0)}
             sx={{ mt: 2 }}
           />
         </DialogContent>

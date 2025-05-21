@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  collection, getDocs, addDoc, updateDoc, doc, query, orderBy, where, serverTimestamp
+  collection, getDocs, addDoc, updateDoc, doc, query, orderBy, where, serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase/firebaseSetup';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Snackbar, Alert, TextField,
-  Button, Dialog, DialogActions, DialogContent, DialogTitle, Select, MenuItem
+  Button, Dialog, DialogActions, DialogContent, DialogTitle, Select, MenuItem,
 } from '@mui/material';
+import { db } from '../firebase/firebaseSetup';
 
-import { Makro, OtherProducts, Alcohol, ProductNames } from '../model/inventory';
+import {
+  Makro, OtherProducts, Alcohol, ProductNames,
+} from '../model/inventory';
 
 interface InventoryEntry {
   id: string;
@@ -31,9 +33,9 @@ const Inventory: React.FC = () => {
     const fetchEntries = async () => {
       const q = query(collection(db, 'inventoryEntries'), orderBy('date'));
       const querySnapshot = await getDocs(q);
-      const entriesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const entriesData = querySnapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
       })) as InventoryEntry[];
       setEntries(entriesData);
     };
@@ -65,7 +67,7 @@ const Inventory: React.FC = () => {
 
     const entryTimestamp = {
       seconds: Math.floor(entryDate.getTime() / 1000),
-      nanoseconds: 0
+      nanoseconds: 0,
     };
 
     try {
@@ -73,7 +75,7 @@ const Inventory: React.FC = () => {
         collection(db, 'inventoryEntries'),
         where('name', '==', selectedProduct),
         where('date', '>=', entryTimestamp),
-        where('date', '<', { seconds: entryTimestamp.seconds + 86400, nanoseconds: 0 })
+        where('date', '<', { seconds: entryTimestamp.seconds + 86400, nanoseconds: 0 }),
       );
       const querySnapshot = await getDocs(q);
 
@@ -84,9 +86,7 @@ const Inventory: React.FC = () => {
           quantity: Number(quantity),
           date: serverTimestamp(),
         });
-        setEntries(entries.map(entry =>
-          entry.id === existingEntry.id ? { ...entry, quantity: Number(quantity), date: { seconds: Date.now() / 1000, nanoseconds: 0 } } : entry
-        ));
+        setEntries(entries.map((entry) => (entry.id === existingEntry.id ? { ...entry, quantity: Number(quantity), date: { seconds: Date.now() / 1000, nanoseconds: 0 } } : entry)));
       } else {
         const entryRef = await addDoc(collection(db, 'inventoryEntries'), {
           name: selectedProduct,
@@ -98,16 +98,16 @@ const Inventory: React.FC = () => {
           id: entryRef.id,
           name: selectedProduct,
           quantity: Number(quantity),
-          date: { seconds: Date.now() / 1000, nanoseconds: 0 }
+          date: { seconds: Date.now() / 1000, nanoseconds: 0 },
         }]);
       }
 
-      setSnackbarMessage('Entry added/updated successfully!');
+      setSnackbarMessage('Producte inventari actualitzat correctament!');
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
       handleCloseDialog();
     } catch (error) {
-      console.error('Error saving the entry: ', error);
+      console.error('Error guardant entrada inventari: ', error);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     }
@@ -141,24 +141,20 @@ const Inventory: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>Date</TableCell>
-              {category.map(name => (
+              {category.map((name) => (
                 <TableCell key={name}>{name}</TableCell>
               ))}
-              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {Object.keys(groupedEntries).map(date => (
+            {Object.keys(groupedEntries).map((date) => (
               <TableRow key={date}>
                 <TableCell>{date}</TableCell>
-                {category.map(name => (
+                {category.map((name) => (
                   <TableCell key={name}>
                     {groupedEntries[date][name] || 0}
                   </TableCell>
                 ))}
-                <TableCell>
-                  {/* Add any additional actions here, such as delete */}
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -173,7 +169,7 @@ const Inventory: React.FC = () => {
         Inventari
       </Typography>
       <Button variant="contained" color="primary" onClick={handleOpenDialog}>
-      Afegeix o Actualitza
+        Actualitza quantitat
       </Button>
       {renderTable(Alcohol, 'Alcohol')}
       {renderTable(OtherProducts, 'Altres Productes')}
@@ -190,7 +186,7 @@ const Inventory: React.FC = () => {
             <MenuItem value="" disabled>
               Selecciona un producte
             </MenuItem>
-            {ProductNames.map(name => (
+            {ProductNames.map((name) => (
               <MenuItem key={name} value={name}>
                 {name}
               </MenuItem>
@@ -198,7 +194,7 @@ const Inventory: React.FC = () => {
           </Select>
           <TextField
             margin="dense"
-            label="Quantity"
+            label="Quantitat"
             type="number"
             fullWidth
             value={quantity}
@@ -207,7 +203,7 @@ const Inventory: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} color="secondary">
-            Cancel
+            Cancel·lar
           </Button>
           <Button onClick={handleSaveEntry} color="primary">
             Guarda
