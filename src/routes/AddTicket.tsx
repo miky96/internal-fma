@@ -180,14 +180,31 @@ const AddTicket: React.FC = () => {
         <Box mt={2} display="flex" flexDirection="column" alignItems="flex-start">
           <Typography variant="h6">
             Total: {calculateTotal()} €
+            <TextField
+              label="Diners Rebuts"
+              type="number"
+              value={moneyReceived}
+              onChange={(e) => setMoneyReceived(e.target.value)}
+              sx={{ mt: 2 }}
+              InputProps={{
+                inputProps: {
+                  step: 'any',
+                  style: { MozAppearance: 'textfield' }
+                },
+                inputMode: 'decimal',
+                // Hide arrows in Chrome, Safari, Edge, Opera
+                sx: {
+                  '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0,
+                  },
+                  '& input[type=number]': {
+                    MozAppearance: 'textfield',
+                  },
+                }
+              }}
+            />
           </Typography>
-          <TextField
-            label="Diners Rebuts"
-            type="number"
-            value={moneyReceived}
-            onChange={(e) => setMoneyReceived(e.target.value)}
-            sx={{ mt: 2 }}
-          />
           <Typography variant="h6" sx={{ mt: 2 }}>
             Canvi: {calculateChange()} €
           </Typography>
