@@ -91,13 +91,13 @@ const AddTicket: React.FC = () => {
       setSnackbarMessage('Ticket guardat correcatment!');
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
-      setMoneyReceived('0');
+      setMoneyReceived('');
     } catch (error) {
       console.error('Error guardant ticket: ', error);
       setSnackbarMessage('Error guardant ticket. Torna-ho a intentar.');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
-      setMoneyReceived('0');
+      setMoneyReceived('');
     }
   };
 
@@ -162,125 +162,213 @@ const AddTicket: React.FC = () => {
   const sortedProducts = [...products].sort((a, b) => a.order_id - b.order_id);
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+    <Box display="flex" flexDirection="column" alignItems="center" mt={4} width="100%">
       <Typography variant="h4" gutterBottom>
         Afegir Tickets
       </Typography>
       {currentUser?.email === 'adminfma@gmail.com' && (
-        <Button variant="contained" color="primary" onClick={handleOpenAddProductDialog}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleOpenAddProductDialog}
+          sx={{ mb: 2, alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
+        >
           Afegir Producte
         </Button>
       )}
-      <Box mt={4} width="100%">
-        <Box mt={2} display="flex" flexDirection="column" alignItems="flex-start">
-          <Typography variant="h6">
-            Total:
-            {' '}
-            {calculateTotal()}
-            {' '}
-            €
-            <TextField
-              label="Diners Rebuts"
-              type="number"
-              value={moneyReceived}
-              onChange={(e) => setMoneyReceived(e.target.value)}
-              sx={{ mt: 2 }}
-              InputProps={{
-                inputProps: {
-                  step: 'any',
-                  style: { MozAppearance: 'textfield' },
-                },
-                inputMode: 'decimal',
-                // Hide arrows in Chrome, Safari, Edge, Opera
-                sx: {
-                  '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-                    WebkitAppearance: 'none',
-                    margin: 0,
-                  },
-                  '& input[type=number]': {
-                    MozAppearance: 'textfield',
-                  },
-                },
-              }}
-            />
-          </Typography>
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Canvi:
-            {' '}
-            {calculateChange()}
-            {' '}
-            €
-          </Typography>
-          <Button variant="contained" color="primary" onClick={handleSaveTicket} sx={{ mt: 2 }}>
-            Guardar Ticket
-          </Button>
-        </Box>
-        <Box mt={2}>
+      <Grid container spacing={3} sx={{ width: '100%', maxWidth: 600 }}>
+        <Grid item xs={12}>
+          <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6}>
+                <Typography variant="h6" component="div">
+                  Total:
+                  {' '}
+                  {calculateTotal()}
+                  {' '}
+                  €
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Diners Rebuts"
+                  type="number"
+                  value={moneyReceived}
+                  onChange={(e) => setMoneyReceived(e.target.value)}
+                  fullWidth
+                  inputProps={{
+                    step: 'any',
+                    style: { MozAppearance: 'textfield' },
+                  }}
+                  inputMode="decimal"
+                  sx={{
+                    '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
+                      WebkitAppearance: 'none',
+                      margin: 0,
+                    },
+                    '& input[type=number]': {
+                      MozAppearance: 'textfield',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="h6" sx={{ mt: { xs: 2, sm: 0 } }}>
+                  Canvi:
+                  {' '}
+                  {calculateChange()}
+                  {' '}
+                  €
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSaveTicket}
+                  fullWidth
+                  sx={{ mt: { xs: 2, sm: 0 } }}
+                >
+                  Guardar Ticket
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
+        <Grid item xs={12}>
           <Typography variant="h5" gutterBottom>
             Productes
           </Typography>
-        </Box>
-        <Paper>
-          <List>
-            {ticketItems.map((item) => (
-              <ListItem key={item.id} sx={{ display: 'flex', alignItems: 'center' }}>
-                <ListItemText
-                  primary={(
-                    <Box display="flex" alignItems="center">
-                      <Typography variant="h6">{item.name}</Typography>
-                      <Typography variant="h6" sx={{ marginLeft: 2 }}>
-                        (
-                        {item.quantity}
-                        )
-                      </Typography>
-                    </Box>
-                  )}
-                />
-                <Box display="flex" alignItems="center">
-                  <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'right' }}>
-                    {(item.price * item.quantity)}
-                    {' '}
-                    €
-                  </Typography>
-                  <IconButton edge="end" color="secondary" onClick={() => handleRemoveTicketItem(item.id)}>
-                    <DeleteIcon sx={{ fontSize: 32 }} />
-                  </IconButton>
-                </Box>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-        <Grid container spacing={2} mt={2}>
-          {sortedProducts.map((product) => (
-            <Grid item xs={6} sm={4} md={3} key={product.id}>
-              <Paper
-                sx={{
-                  padding: 1,
-                  textAlign: 'center',
-                  height: '200px', // Adjust height as necessary
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: 'auto' }} />
-                <Box sx={{
-                  marginTop: 1, display: 'flex', justifyContent: 'space-between', width: '100%',
-                }}
-                >
-                  <Button variant="contained" color="primary" onClick={() => handleAddProductToTicket(product)}>
-                    <AddIcon />
-                  </Button>
-                  <Button variant="contained" color="secondary" onClick={() => handleRemoveProductToTicket(product)}>
-                    <RemoveIcon />
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
+          <Paper>
+            <List>
+              {ticketItems.map((item) => (
+                <ListItem key={item.id} sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ListItemText
+                    primary={(
+                      <Box display="flex" alignItems="center">
+                        <Typography variant="h6">{item.name}</Typography>
+                        <Typography variant="h6" sx={{ marginLeft: 2 }}>
+                          (
+                          {item.quantity}
+                          )
+                        </Typography>
+                      </Box>
+                    )}
+                  />
+                  <Box display="flex" alignItems="center">
+                    <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'right', minWidth: 120 }}>
+                      {(item.price * item.quantity)}
+                      {' '}
+                      €
+                    </Typography>
+                    <IconButton edge="end" color="secondary" onClick={() => handleRemoveTicketItem(item.id)}>
+                      <DeleteIcon sx={{ fontSize: 32 }} />
+                    </IconButton>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
         </Grid>
-      </Box>
+        <Grid item xs={12}>
+          <Grid container spacing={2}>
+            {sortedProducts.map((product) => (
+              <Grid item xs={6} sm={6} md={3} key={product.id}>
+                <Paper
+                  sx={{
+                    position: 'relative',
+                    width: '100%',
+                    aspectRatio: '1 / 1', // makes the box square
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 0,
+                  }}
+                >
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      p: 1,
+                      pointerEvents: 'none', // allow clicks to pass through except for buttons
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: 17,
+                        left: -6,
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 2,
+                        pointerEvents: 'auto',
+                      }}
+                    >
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleAddProductToTicket(product)}
+                        sx={{
+                          minWidth: 0,
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          fontSize: 40,
+                          opacity: 0.9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <AddIcon sx={{ fontSize: 40 }} />
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={() => handleRemoveProductToTicket(product)}
+                        sx={{
+                          minWidth: 0,
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          fontSize: 40,
+                          opacity: 0.9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <RemoveIcon sx={{ fontSize: 40 }} />
+                      </Button>
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      </Grid>
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
@@ -291,7 +379,7 @@ const AddTicket: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-      <Dialog open={addProductOpen} onClose={handleCloseAddProductDialog}>
+      <Dialog open={addProductOpen} onClose={handleCloseAddProductDialog} fullWidth maxWidth="sm">
         <DialogTitle>Afegir Nou Producte</DialogTitle>
         <DialogContent>
           <TextField
