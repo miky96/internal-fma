@@ -18,6 +18,7 @@ import Inventory from './Inventory';
 import AddTicket from './AddTicket';
 import ViewTickets from './ViewTickets';
 import { AuthContext } from '../context/AuthContext';
+import EditProduct from './EditProduct';
 
 const MainPage: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -28,8 +29,8 @@ const MainPage: React.FC = () => {
   const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
     if (
       event.type === 'keydown'
-        && ((event as React.KeyboardEvent).key === 'Tab'
-          || (event as React.KeyboardEvent).key === 'Shift')
+      && ((event as React.KeyboardEvent).key === 'Tab'
+        || (event as React.KeyboardEvent).key === 'Shift')
     ) {
       return;
     }
@@ -69,9 +70,9 @@ const MainPage: React.FC = () => {
             </ListItemButton>
             {(currentUser?.email === 'inventarifma@gmail.com'
               || currentUser?.email === 'adminfma@gmail.com') && (
-              <ListItemButton onClick={() => handleNavigation('inventory')}>
-                <ListItemText primary="Inventari" />
-              </ListItemButton>
+                <ListItemButton onClick={() => handleNavigation('inventory')}>
+                  <ListItemText primary="Inventari" />
+                </ListItemButton>
             )}
             <ListItemButton onClick={() => handleNavigation('add-ticket')}>
               <ListItemText primary="Afegir Tickets" />
@@ -79,9 +80,15 @@ const MainPage: React.FC = () => {
             {(currentUser?.email === 'inventarifma@gmail.com'
               || currentUser?.email === 'economiafma@gmail.com'
               || currentUser?.email === 'adminfma@gmail.com') && (
-              <ListItemButton onClick={() => handleNavigation('view-ticket')}>
-                <ListItemText primary="Veure Tickets" />
-              </ListItemButton>
+                <ListItemButton onClick={() => handleNavigation('view-ticket')}>
+                  <ListItemText primary="Veure Tickets" />
+                </ListItemButton>
+            )}
+            {(currentUser?.email === 'martafma@gmail.com'
+              || currentUser?.email === 'adminfma@gmail.com') && (
+                <ListItemButton onClick={() => handleNavigation('edit-product')}>
+                  <ListItemText primary="Editar Productes" />
+                </ListItemButton>
             )}
             <ListItemButton onClick={() => signOut()}>
               <ListItemText primary="Log Out" />
@@ -94,6 +101,7 @@ const MainPage: React.FC = () => {
           <Route path="inventory" element={<Inventory />} />
           <Route path="add-ticket" element={<AddTicket />} />
           <Route path="view-ticket" element={<ViewTickets />} />
+          <Route path="edit-product" element={<EditProduct />} />
         </Routes>
       </Container>
       {location.pathname === '/mainpage' && (
