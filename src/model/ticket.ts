@@ -17,7 +17,25 @@ export interface Product {
   name: string;
   price: number;
   imageUrl: string;
+  type: ProductTypes;
 }
+
+export enum ProductTypes {
+  BARRA = 0,
+  MERCHANDISING,
+}
+/*
+* The userfriendly names of \ref ProductTypes
+*/
+export const ProductTypesNames: { [key in ProductTypes]: string } = {
+  [ProductTypes.BARRA]: 'BARRA',
+  [ProductTypes.MERCHANDISING]: 'MERCHANDISING',
+};
+
+export const renderProjectStatus = (status: ProductTypes) => {
+  const typeName = ProductTypesNames[status];
+  return typeName !== undefined ? typeName : 'Unknown type';
+};
 
 export interface TicketItem {
   id: string;
