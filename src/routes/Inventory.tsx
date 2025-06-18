@@ -7,6 +7,7 @@ import {
   TableHead, TableRow, Paper, Snackbar, Alert, TextField,
   Button, Dialog, DialogActions, DialogContent, DialogTitle, Select, MenuItem,
 } from '@mui/material';
+// eslint-disable-next-line import/extensions
 import { db } from '../firebase/firebaseSetup';
 
 import {

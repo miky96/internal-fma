@@ -9,6 +9,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
+// eslint-disable-next-line import/extensions
 import { db } from '../firebase/firebaseSetup';
 import {
   Product, ProductTypes, ProductTypesNames, TicketItem,
