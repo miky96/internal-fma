@@ -9,6 +9,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
+// eslint-disable-next-line import/extensions
 import { db } from '../firebase/firebaseSetup';
 import {
   Product, ProductTypes, ProductTypesNames, TicketItem,
@@ -376,24 +377,6 @@ const AddTicket: React.FC = () => {
                     >
                       <Button
                         variant="contained"
-                        color="primary"
-                        onClick={() => handleAddProductToTicket(product)}
-                        sx={{
-                          minWidth: 0,
-                          width: 56,
-                          height: 56,
-                          borderRadius: '50%',
-                          fontSize: 40,
-                          opacity: 0.9,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <AddIcon sx={{ fontSize: 40 }} />
-                      </Button>
-                      <Button
-                        variant="contained"
                         color="secondary"
                         onClick={() => handleRemoveProductToTicket(product)}
                         sx={{
@@ -409,6 +392,24 @@ const AddTicket: React.FC = () => {
                         }}
                       >
                         <RemoveIcon sx={{ fontSize: 40 }} />
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleAddProductToTicket(product)}
+                        sx={{
+                          minWidth: 0,
+                          width: 56,
+                          height: 56,
+                          borderRadius: '50%',
+                          fontSize: 40,
+                          opacity: 0.9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <AddIcon sx={{ fontSize: 40 }} />
                       </Button>
                     </Box>
                   </Box>

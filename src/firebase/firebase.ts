@@ -7,6 +7,7 @@ import {
   NextOrObserver,
   User,
 } from 'firebase/auth';
+// eslint-disable-next-line import/extensions
 import { getFirebaseConfig } from './firebaseSetup';
 
 const app = initializeApp(getFirebaseConfig());

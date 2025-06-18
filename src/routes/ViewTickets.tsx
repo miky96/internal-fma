@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { format, addDays } from 'date-fns';
+// eslint-disable-next-line import/extensions
 import { db } from '../firebase/firebaseSetup';
 import { AuthContext } from '../context/AuthContext';
 import { AggregatedData, Ticket } from '../model/ticket';

@@ -8,6 +8,7 @@ import {
   Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem,
 } from '@mui/material';
 import { AuthContext } from '../context/AuthContext';
+// eslint-disable-next-line import/extensions
 import { db } from '../firebase/firebaseSetup';
 import { Product, ProductTypes, ProductTypesNames } from '../model/ticket';
 
