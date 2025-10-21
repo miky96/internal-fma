@@ -10,10 +10,6 @@ import {
 // eslint-disable-next-line import/extensions
 import { db } from '../firebase/firebaseSetup';
 
-import {
-  Makro, OtherProducts, Alcohol, ProductNames,
-} from '../model/inventory';
-
 interface InventoryEntry {
   id: string;
   name: string;
@@ -21,14 +17,24 @@ interface InventoryEntry {
   date: { seconds: number; nanoseconds: number };
 }
 
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+}
+
 const Inventory: React.FC = () => {
   const [entries, setEntries] = useState<InventoryEntry[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState<number | string>('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState('');
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -43,6 +49,27 @@ const Inventory: React.FC = () => {
 
     fetchEntries();
   }, []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const q = query(collection(db, 'products'));
+      const querySnapshot = await getDocs(q);
+      const productsData = querySnapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Product[];
+      setProducts(productsData);
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Helper: get unique categories from products
+  const categories = Array.from(new Set(products.map((p) => p.category)));
+
+  // Helper: get products by category
+  const getProductsByCategory = (category: string) =>
+    products.filter((p) => p.category === category).map((p) => p.name);
 
   const handleOpenDialog = () => {
     setSelectedProduct('');
@@ -132,49 +159,115 @@ const Inventory: React.FC = () => {
     return acc;
   }, {} as { [date: string]: { [productName: string]: number } });
 
-  const renderTable = (category: string[], categoryName: string) => (
-    <Box mt={4} width="100%">
-      <Typography variant="h6" gutterBottom>
-        {categoryName}
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Date</TableCell>
-              {category.map((name) => (
-                <TableCell key={name}>{name}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {Object.keys(groupedEntries).map((date) => (
-              <TableRow key={date}>
-                <TableCell>{date}</TableCell>
-                {category.map((name) => (
-                  <TableCell key={name}>
-                    {groupedEntries[date][name] || 0}
-                  </TableCell>
+  const renderTable = (category: string, categoryName: string) => {
+    const productNames = getProductsByCategory(category);
+    return (
+      <Box mt={4} width="100%">
+        <Typography variant="h6" gutterBottom>
+          {categoryName}
+        </Typography>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Date</TableCell>
+                {productNames.map((name) => (
+                  <TableCell key={name}>{name}</TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
-  );
+            </TableHead>
+            <TableBody>
+              {Object.keys(groupedEntries).map((date) => (
+                <TableRow key={date}>
+                  <TableCell>{date}</TableCell>
+                  {productNames.map((name) => (
+                    <TableCell key={name}>
+                      {groupedEntries[date][name] || 0}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+    );
+  };
+
+  const handleOpenNewProductDialog = () => {
+    setNewProductDialogOpen(true);
+    setNewProductName('');
+    setNewProductCategory('');
+  };
+  const handleCloseNewProductDialog = () => {
+    setNewProductDialogOpen(false);
+    setNewProductName('');
+    setNewProductCategory('');
+  };
+
+  const handleAddNewProduct = async () => {
+    if (!newProductName || !newProductCategory) {
+      setSnackbarMessage('Omple tots els camps del producte nou');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    try {
+      const docRef = await addDoc(collection(db, 'products'), {
+        name: newProductName,
+        category: newProductCategory,
+      });
+      setProducts([...products, { id: docRef.id, name: newProductName, category: newProductCategory }]);
+      setSnackbarMessage('Producte afegit correctament!');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+      handleCloseNewProductDialog();
+    } catch (e) {
+      setSnackbarMessage('Error afegint producte nou');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
+  };
 
   return (
     <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
       <Typography variant="h4" gutterBottom>
         Inventari
       </Typography>
-      <Button variant="contained" color="primary" onClick={handleOpenDialog}>
-        Actualitza quantitat
-      </Button>
-      {renderTable(Alcohol, 'Alcohol')}
-      {renderTable(OtherProducts, 'Altres Productes')}
-      {renderTable(Makro, 'Menjar')}
+      <Box display="flex" gap={2} mb={2}>
+        <Button variant="contained" color="primary" onClick={handleOpenDialog}>
+          Actualitza quantitat
+        </Button>
+        <Button variant="outlined" color="secondary" onClick={handleOpenNewProductDialog}>
+          Nou producte
+        </Button>
+      </Box>
+      {/* Render a table for each category */}
+      {categories.map((cat) => renderTable(cat, cat))}
+      {/* New Product Dialog */}
+      <Dialog open={newProductDialogOpen} onClose={handleCloseNewProductDialog}>
+        <DialogTitle>Nou producte</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Nom"
+            value={newProductName}
+            onChange={(e) => setNewProductName(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+          <TextField
+            label="Categoria"
+            value={newProductCategory}
+            onChange={(e) => setNewProductCategory(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseNewProductDialog} color="secondary">Cancel·lar</Button>
+          <Button onClick={handleAddNewProduct} color="primary">Afegeix</Button>
+        </DialogActions>
+      </Dialog>
       <Dialog open={open} onClose={handleCloseDialog}>
         <DialogTitle>Afegeix o Actualitza</DialogTitle>
         <DialogContent>
@@ -187,9 +280,9 @@ const Inventory: React.FC = () => {
             <MenuItem value="" disabled>
               Selecciona un producte
             </MenuItem>
-            {ProductNames.map((name) => (
-              <MenuItem key={name} value={name}>
-                {name}
+            {products.map((product) => (
+              <MenuItem key={product.id} value={product.name}>
+                {product.name}
               </MenuItem>
             ))}
           </Select>
