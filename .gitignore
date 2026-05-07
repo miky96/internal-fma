@@ -8,7 +8,10 @@
 # testing
 /coverage
 
-# production
+# build output (Vite)
+/dist
+
+# build output legacy (CRA - es pot eliminar quan no quedi rastre)
 /build
 
 # misc

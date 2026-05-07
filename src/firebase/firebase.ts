@@ -1,35 +1,24 @@
-import { initializeApp } from 'firebase/app';
 import {
-  getAuth,
   onAuthStateChanged,
   signOut,
   signInWithEmailAndPassword,
   NextOrObserver,
   User,
 } from 'firebase/auth';
-// eslint-disable-next-line import/extensions
-import { getFirebaseConfig } from './firebaseSetup';
+import { auth } from './firebaseSetup';
 
-const app = initializeApp(getFirebaseConfig());
-const auth = getAuth(app);
-
-export const signInUser = async (
-  email: string,
-  password: string,
-) => {
+export const signInUser = async (email: string, password: string) => {
   if (!email || !password) {
     return { error: 'Email and password are required' };
   }
 
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential; // Successfully signed in
+    return userCredential;
   } catch (error: unknown) {
-    let errorMessage = '';
-
-    // Type assertion to make sure error is FirebaseError
     if (error instanceof Error) {
-      switch ((error as any).code) {
+      const { code } = error as Error & { code?: string };
+      switch (code) {
         case 'auth/invalid-email':
           throw new Error('El login ha fallat. Email incorrecte.');
         case 'auth/user-disabled':
@@ -41,11 +30,8 @@ export const signInUser = async (
         default:
           throw new Error('El login ha fallat. Torna a provar.');
       }
-    } else {
-      errorMessage = 'An unknown error occurred.';
     }
-
-    return { error: errorMessage };
+    return { error: 'An unknown error occurred.' };
   }
 };
 

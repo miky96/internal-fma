@@ -1,4 +1,4 @@
-# Build the React app
+# Build the React app (Vite)
 build:
 	npm ci --legacy-peer-deps
 	npm run build
@@ -7,12 +7,16 @@ build:
 deploy: build
 	firebase deploy --only hosting
 
-# Preview locally (optional)
-serve:
-	firebase serve --only hosting
+# Local dev server
+dev:
+	npm run dev
 
-# Clean node_modules and build (optional)
+# Local preview of the production build
+preview:
+	npm run preview
+
+# Clean node_modules and build outputs
 clean:
-	rm -rf node_modules build
+	rm -rf node_modules dist build
 
-.PHONY: build deploy serve clean
+.PHONY: build deploy dev preview clean

@@ -1,35 +1,41 @@
 import React, { useContext, useEffect, useState } from 'react';
-import EditIcon from '@mui/icons-material/Edit';
 import {
   collection, getDocs, updateDoc, doc, addDoc,
 } from 'firebase/firestore';
 import {
-  Box, Typography, Grid, Paper, Button, Snackbar, Alert,
-  Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem,
-} from '@mui/material';
+  Stack, Title, Group, Grid, Paper, Button, ActionIcon, TextInput, NumberInput, Select, Modal,
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { IconEdit } from '@tabler/icons-react';
 import { AuthContext } from '../context/AuthContext';
-// eslint-disable-next-line import/extensions
-import { db } from '../firebase/firebaseSetup';
+import { db } from '../firebase/firestore';
 import { Product, ProductTypes, ProductTypesNames } from '../model/ticket';
+
+const showError = (message: string) => notifications.show({ color: 'red', message });
+const showOk = (message: string) => notifications.show({ color: 'green', message });
+
+const typeSelectData = Object.keys(ProductTypesNames).map((key) => {
+  const t = parseInt(key, 10) as ProductTypes;
+  return { value: String(t), label: ProductTypesNames[t] };
+});
 
 const EditProduct: React.FC = () => {
   const { currentUser } = useContext(AuthContext);
   const [products, setProducts] = useState<Product[]>([]);
+
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState('');
   const [editPrice, setEditPrice] = useState<number | string>('');
-  const [editOrderId, setEditOrderId] = useState<number>(0);
+  const [editOrderId, setEditOrderId] = useState<number | string>(0);
   const [editType, setEditType] = useState<ProductTypes>(ProductTypes.BARRA);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState<number | string>('');
-  const [newProductOrderId, setNewProductOrderId] = useState<number>(0);
+  const [newProductOrderId, setNewProductOrderId] = useState<number | string>(0);
   const [newProductImageUrl, setNewProductImageUrl] = useState('');
-  const [newProductType, setNewProductType] = useState(ProductTypes.BARRA);
+  const [newProductType, setNewProductType] = useState<ProductTypes>(ProductTypes.BARRA);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -60,9 +66,7 @@ const EditProduct: React.FC = () => {
   const handleSaveEdit = async () => {
     if (!selectedProduct) return;
     if (!editName || editPrice === '') {
-      setSnackbarMessage('Omple tots els camps.');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showError('Omple tots els camps.');
       return;
     }
     try {
@@ -70,24 +74,24 @@ const EditProduct: React.FC = () => {
       await updateDoc(productRef, {
         name: editName,
         price: Number(editPrice),
-        order_id: editOrderId,
+        order_id: Number(editOrderId) || 0,
         type: editType,
       });
       localStorage.removeItem('all_products');
 
       setProducts((prev) => prev.map((p) => (p.id === selectedProduct.id
         ? {
-          ...p, name: editName, price: Number(editPrice), order_id: editOrderId, type: editType,
+          ...p,
+          name: editName,
+          price: Number(editPrice),
+          order_id: Number(editOrderId) || 0,
+          type: editType,
         }
         : p)));
-      setSnackbarMessage('Producte actualitzat correctament!');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showOk('Producte actualitzat correctament!');
       handleCloseEditDialog();
-    } catch (error) {
-      setSnackbarMessage('Error actualitzant el producte.');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+    } catch {
+      showError('Error actualitzant el producte.');
     }
   };
 
@@ -97,75 +101,52 @@ const EditProduct: React.FC = () => {
 
   const handleSaveNewProduct = async () => {
     if (!newProductName || newProductPrice === '' || !newProductImageUrl) {
-      setSnackbarMessage('Omple tots els camps.');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showError('Omple tots els camps.');
       return;
     }
-
     try {
-      // Create product object without id (let Firestore generate it)
       const newProduct = {
-        order_id: newProductOrderId,
+        order_id: Number(newProductOrderId) || 0,
         name: newProductName,
         price: Number(newProductPrice),
         imageUrl: newProductImageUrl,
         type: newProductType,
       };
-
       const productRef = await addDoc(collection(db, 'ticket_products'), newProduct);
       localStorage.removeItem('all_products');
       setProducts([...products, { id: productRef.id, ...newProduct }]);
-      setSnackbarMessage('Producte afegit correctament!');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showOk('Producte afegit correctament!');
       handleCloseAddProductDialog();
     } catch (error) {
       console.error('Error guardant el producte: ', error);
-      setSnackbarMessage('Error guardant el producte. Torna-ho a intentar.');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showError('Error guardant el producte. Torna-ho a intentar.');
     }
   };
-
-  const handleCloseSnackbar = () => setSnackbarOpen(false);
 
   const handleOpenAddProductDialog = () => {
     setNewProductName('');
     setNewProductPrice('');
     setNewProductImageUrl('');
+    setNewProductOrderId(0);
     setNewProductType(ProductTypes.BARRA);
     setAddProductOpen(true);
   };
 
-  const renderTypeOptions = (): JSX.Element[] => Object.keys(ProductTypesNames).map((key) => {
-    const type = parseInt(key, 10) as ProductTypes;
-    const typeName = ProductTypesNames[type];
-    return (
-      <MenuItem key={type} value={type}>
-        {typeName}
-      </MenuItem>
-    );
-  });
-
   const sortedProducts = [...products].sort((a, b) => a.order_id - b.order_id);
-  const barraProducts = sortedProducts.filter((product) => product.type === ProductTypes.BARRA);
-  const merchandisingProducts = sortedProducts.filter((product) => product.type === ProductTypes.MERCHANDISING);
+  const barraProducts = sortedProducts.filter((p) => p.type === ProductTypes.BARRA);
+  const merchandisingProducts = sortedProducts.filter((p) => p.type === ProductTypes.MERCHANDISING);
 
   const renderProductGrid = (productList: Product[]) => (
-    <Grid container spacing={2}>
+    <Grid w="100%">
       {productList.map((product) => (
-        <Grid item xs={6} sm={6} md={3} key={product.id}>
+        <Grid.Col span={{ base: 6, sm: 6, md: 3 }} key={product.id}>
           <Paper
-            sx={{
+            withBorder
+            style={{
               position: 'relative',
               width: '100%',
               aspectRatio: '1 / 1',
               overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              p: 0,
             }}
           >
             <img
@@ -178,218 +159,118 @@ const EditProduct: React.FC = () => {
                 display: 'block',
               }}
             />
-            <Box
-              sx={{
+            <Group
+              justify="center"
+              style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                p: 1,
+                inset: 0,
+                pointerEvents: 'none',
               }}
             >
-              <Button
-                variant="contained"
-                color="primary"
+              <ActionIcon
+                size={56}
+                radius="xl"
+                color="blue"
+                variant="filled"
                 onClick={() => handleEditClick(product)}
-                sx={{
-                  minWidth: 0,
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  fontSize: 40,
-                  opacity: 0.9,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                aria-label="Edita producte"
+                style={{ pointerEvents: 'auto', opacity: 0.9 }}
               >
-                <EditIcon sx={{ fontSize: 40 }} />
-              </Button>
-            </Box>
+                <IconEdit size={28} />
+              </ActionIcon>
+            </Group>
           </Paper>
-        </Grid>
+        </Grid.Col>
       ))}
     </Grid>
   );
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" mt={4} width="100%">
+    <Stack align="center" mt="md" gap="md" w="100%">
       {currentUser?.email === 'adminfma@gmail.com' && (
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleOpenAddProductDialog}
-          sx={{ mb: 2, alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
-        >
-          Afegir Producte
-        </Button>
+        <Group w="100%">
+          <Button color="blue" onClick={handleOpenAddProductDialog}>Afegir Producte</Button>
+        </Group>
       )}
-      <Typography variant="h4" gutterBottom>
-        Editar Productes
-      </Typography>
-      <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
-        {ProductTypesNames[ProductTypes.BARRA]}
-      </Typography>
+      <Title order={2}>Editar Productes</Title>
+
+      <Title order={3} mt="xs">{ProductTypesNames[ProductTypes.BARRA]}</Title>
       {renderProductGrid(barraProducts)}
-      <Typography variant="h5" sx={{ mt: 4, mb: 1 }}>
-        {ProductTypesNames[ProductTypes.MERCHANDISING]}
-      </Typography>
+
+      <Title order={3} mt="md">{ProductTypesNames[ProductTypes.MERCHANDISING]}</Title>
       {renderProductGrid(merchandisingProducts)}
 
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-
-      <Dialog open={editDialogOpen} onClose={handleCloseEditDialog} fullWidth maxWidth="sm">
-        <DialogTitle>Edita el Producte</DialogTitle>
-        <DialogContent>
-          <TextField
+      <Modal opened={editDialogOpen} onClose={handleCloseEditDialog} title="Edita el Producte" size="md" centered>
+        <Stack>
+          <TextInput
             label="Nom del Producte"
-            fullWidth
             value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            sx={{ mt: 2 }}
+            onChange={(e) => setEditName(e.currentTarget.value)}
           />
-          <TextField
+          <NumberInput
             label="Preu del Producte"
-            type="number"
-            fullWidth
             value={editPrice}
-            onChange={(e) => setEditPrice(e.target.value)}
-            sx={{
-              '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-                WebkitAppearance: 'none',
-                margin: 0,
-              },
-              '& input[type=number]': {
-                MozAppearance: 'textfield',
-              },
-              mt: 2,
-            }}
+            onChange={(val) => setEditPrice(val ?? '')}
+            decimalScale={2}
+            hideControls
           />
-          <TextField
+          <Select
             label="Tipus de producte"
-            fullWidth
-            select
-            value={editType}
-            type="number"
-            onChange={(e) => setEditType(e.target.value as unknown as ProductTypes)}
-            sx={{ mt: 2 }}
-          >
-            {renderTypeOptions()}
-          </TextField>
-          <TextField
+            data={typeSelectData}
+            value={String(editType)}
+            onChange={(val) => setEditType(Number(val) as ProductTypes)}
+          />
+          <NumberInput
             label="Id ordre del producte"
-            type="number"
-            fullWidth
             value={editOrderId}
-            onChange={(e) => setEditOrderId(Number(e.target.value) || 0)}
-            sx={{
-              '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-                WebkitAppearance: 'none',
-                margin: 0,
-              },
-              '& input[type=number]': {
-                MozAppearance: 'textfield',
-              },
-              mt: 2,
-            }}
+            onChange={(val) => setEditOrderId(val ?? 0)}
+            hideControls
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseEditDialog} color="secondary">
-            Cancel·lar
-          </Button>
-          <Button onClick={handleSaveEdit} color="primary">
-            Guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={addProductOpen} onClose={handleCloseAddProductDialog} fullWidth maxWidth="sm">
-        <DialogTitle>Afegir Nou Producte</DialogTitle>
-        <DialogContent>
-          <TextField
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={handleCloseEditDialog}>Cancel·lar</Button>
+            <Button color="blue" onClick={handleSaveEdit}>Guardar</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal opened={addProductOpen} onClose={handleCloseAddProductDialog} title="Afegir Nou Producte" size="md" centered>
+        <Stack>
+          <TextInput
             label="Nom del Producte"
-            fullWidth
             value={newProductName}
-            onChange={(e) => setNewProductName(e.target.value)}
-            sx={{ mt: 2 }}
+            onChange={(e) => setNewProductName(e.currentTarget.value)}
           />
-          <TextField
+          <NumberInput
             label="Preu del Producte"
-            type="number"
-            fullWidth
             value={newProductPrice}
-            onChange={(e) => setNewProductPrice(e.target.value)}
-            sx={{
-              '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-                WebkitAppearance: 'none',
-                margin: 0,
-              },
-              '& input[type=number]': {
-                MozAppearance: 'textfield',
-              },
-              mt: 2,
-            }}
+            onChange={(val) => setNewProductPrice(val ?? '')}
+            decimalScale={2}
+            hideControls
           />
-          <TextField
+          <TextInput
             label="URL de la Imatge"
-            fullWidth
             value={newProductImageUrl}
-            onChange={(e) => setNewProductImageUrl(e.target.value)}
-            sx={{ mt: 2 }}
+            onChange={(e) => setNewProductImageUrl(e.currentTarget.value)}
           />
-          <TextField
+          <Select
             label="Tipus de producte"
-            fullWidth
-            select
-            value={newProductType}
-            type="number"
-            onChange={(e) => setNewProductType(e.target.value as unknown as ProductTypes)}
-            sx={{ mt: 2 }}
-          >
-            {renderTypeOptions()}
-          </TextField>
-          <TextField
-            label="Id ordre del producte"
-            type="number"
-            fullWidth
-            value={newProductOrderId}
-            onChange={(e) => setNewProductOrderId(Number(e.target.value) || 0)}
-            sx={{
-              '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-                WebkitAppearance: 'none',
-                margin: 0,
-              },
-              '& input[type=number]': {
-                MozAppearance: 'textfield',
-              },
-              mt: 2,
-            }}
+            data={typeSelectData}
+            value={String(newProductType)}
+            onChange={(val) => setNewProductType(Number(val) as ProductTypes)}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAddProductDialog} color="secondary">
-            Cancel·lar
-          </Button>
-          <Button onClick={handleSaveNewProduct} color="primary">
-            Guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+          <NumberInput
+            label="Id ordre del producte"
+            value={newProductOrderId}
+            onChange={(val) => setNewProductOrderId(val ?? 0)}
+            hideControls
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={handleCloseAddProductDialog}>Cancel·lar</Button>
+            <Button color="blue" onClick={handleSaveNewProduct}>Guardar</Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </Stack>
   );
 };
 
