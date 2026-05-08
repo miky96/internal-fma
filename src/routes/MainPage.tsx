@@ -11,6 +11,7 @@ import Inventory from './Inventory';
 import AddTicket from './AddTicket';
 import ViewTickets from './ViewTickets';
 import EditProduct from './EditProduct';
+import Stats from './Stats';
 
 const MainPage: React.FC = () => {
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
@@ -54,6 +55,9 @@ const MainPage: React.FC = () => {
           {isEconomia && (
             <NavLink label="Veure Tickets" onClick={() => handleNavigation('view-ticket')} />
           )}
+          {isEconomia && (
+            <NavLink label="Estadístiques" onClick={() => handleNavigation('stats')} />
+          )}
           {isMarta && (
             <NavLink label="Editar Productes" onClick={() => handleNavigation('edit-product')} />
           )}
@@ -67,6 +71,7 @@ const MainPage: React.FC = () => {
             <Route path="inventory" element={<Inventory />} />
             <Route path="add-ticket" element={<AddTicket />} />
             <Route path="view-ticket" element={<ViewTickets />} />
+            <Route path="stats" element={<Stats />} />
             <Route path="edit-product" element={<EditProduct />} />
           </Routes>
         </Container>

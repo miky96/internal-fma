@@ -3,10 +3,13 @@ import {
   collection, getDocs, updateDoc, doc, addDoc,
 } from 'firebase/firestore';
 import {
-  Stack, Title, Group, Grid, Paper, Button, ActionIcon, TextInput, NumberInput, Select, Modal,
+  Stack, Title, Group, Grid, Paper, Button, ActionIcon, TextInput, NumberInput, Select,
+  Modal, Tabs, Box,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconEdit } from '@tabler/icons-react';
+import {
+  IconEdit, IconPlus, IconBeer, IconShirt,
+} from '@tabler/icons-react';
 import { AuthContext } from '../context/AuthContext';
 import { db } from '../firebase/firestore';
 import { Product, ProductTypes, ProductTypesNames } from '../model/ticket';
@@ -21,7 +24,9 @@ const typeSelectData = Object.keys(ProductTypesNames).map((key) => {
 
 const EditProduct: React.FC = () => {
   const { currentUser } = useContext(AuthContext);
+  const isAdmin = currentUser?.email === 'adminfma@gmail.com';
   const [products, setProducts] = useState<Product[]>([]);
+  const [activeTab, setActiveTab] = useState<string>(String(ProductTypes.BARRA));
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -137,11 +142,13 @@ const EditProduct: React.FC = () => {
   const merchandisingProducts = sortedProducts.filter((p) => p.type === ProductTypes.MERCHANDISING);
 
   const renderProductGrid = (productList: Product[]) => (
-    <Grid w="100%">
+    <Grid>
       {productList.map((product) => (
         <Grid.Col span={{ base: 6, sm: 6, md: 3 }} key={product.id}>
           <Paper
             withBorder
+            shadow="sm"
+            radius="md"
             style={{
               position: 'relative',
               width: '100%',
@@ -159,6 +166,28 @@ const EditProduct: React.FC = () => {
                 display: 'block',
               }}
             />
+            <Box
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                padding: '8px 10px',
+                background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 100%)',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: 13,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <span>{product.name}</span>
+              <span>
+                {product.price.toFixed(2)}
+                {' €'}
+              </span>
+            </Box>
             <Group
               justify="center"
               style={{
@@ -170,13 +199,13 @@ const EditProduct: React.FC = () => {
               <ActionIcon
                 size={56}
                 radius="xl"
-                color="blue"
+                color="indigo"
                 variant="filled"
                 onClick={() => handleEditClick(product)}
                 aria-label="Edita producte"
-                style={{ pointerEvents: 'auto', opacity: 0.9 }}
+                style={{ pointerEvents: 'auto', opacity: 0.92 }}
               >
-                <IconEdit size={28} />
+                <IconEdit size={26} />
               </ActionIcon>
             </Group>
           </Paper>
@@ -186,21 +215,48 @@ const EditProduct: React.FC = () => {
   );
 
   return (
-    <Stack align="center" mt="md" gap="md" w="100%">
-      {currentUser?.email === 'adminfma@gmail.com' && (
-        <Group w="100%">
-          <Button color="blue" onClick={handleOpenAddProductDialog}>Afegir Producte</Button>
-        </Group>
-      )}
-      <Title order={2}>Editar Productes</Title>
+    <Stack mt="md" gap="md" w="100%">
+      <Group justify="space-between" wrap="wrap">
+        <Title order={2}>Editar Productes</Title>
+        {isAdmin && (
+          <Button
+            color="indigo"
+            leftSection={<IconPlus size={16} />}
+            onClick={handleOpenAddProductDialog}
+          >
+            Afegir Producte
+          </Button>
+        )}
+      </Group>
 
-      <Title order={3} mt="xs">{ProductTypesNames[ProductTypes.BARRA]}</Title>
-      {renderProductGrid(barraProducts)}
+      <Tabs
+        value={activeTab}
+        onChange={(v) => setActiveTab(v ?? String(ProductTypes.BARRA))}
+        variant="pills"
+        radius="md"
+      >
+        <Tabs.List grow>
+          <Tabs.Tab value={String(ProductTypes.BARRA)} leftSection={<IconBeer size={16} />}>
+            {ProductTypesNames[ProductTypes.BARRA]}
+          </Tabs.Tab>
+          <Tabs.Tab value={String(ProductTypes.MERCHANDISING)} leftSection={<IconShirt size={16} />}>
+            {ProductTypesNames[ProductTypes.MERCHANDISING]}
+          </Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value={String(ProductTypes.BARRA)} pt="md">
+          {renderProductGrid(barraProducts)}
+        </Tabs.Panel>
+        <Tabs.Panel value={String(ProductTypes.MERCHANDISING)} pt="md">
+          {renderProductGrid(merchandisingProducts)}
+        </Tabs.Panel>
+      </Tabs>
 
-      <Title order={3} mt="md">{ProductTypesNames[ProductTypes.MERCHANDISING]}</Title>
-      {renderProductGrid(merchandisingProducts)}
-
-      <Modal opened={editDialogOpen} onClose={handleCloseEditDialog} title="Edita el Producte" size="md" centered>
+      <Modal
+        opened={editDialogOpen}
+        onClose={handleCloseEditDialog}
+        title="Edita el Producte"
+        size="md"
+      >
         <Stack>
           <TextInput
             label="Nom del Producte"
@@ -228,12 +284,17 @@ const EditProduct: React.FC = () => {
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={handleCloseEditDialog}>Cancel·lar</Button>
-            <Button color="blue" onClick={handleSaveEdit}>Guardar</Button>
+            <Button color="indigo" onClick={handleSaveEdit}>Guardar</Button>
           </Group>
         </Stack>
       </Modal>
 
-      <Modal opened={addProductOpen} onClose={handleCloseAddProductDialog} title="Afegir Nou Producte" size="md" centered>
+      <Modal
+        opened={addProductOpen}
+        onClose={handleCloseAddProductDialog}
+        title="Afegir Nou Producte"
+        size="md"
+      >
         <Stack>
           <TextInput
             label="Nom del Producte"
@@ -266,7 +327,7 @@ const EditProduct: React.FC = () => {
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={handleCloseAddProductDialog}>Cancel·lar</Button>
-            <Button color="blue" onClick={handleSaveNewProduct}>Guardar</Button>
+            <Button color="indigo" onClick={handleSaveNewProduct}>Guardar</Button>
           </Group>
         </Stack>
       </Modal>

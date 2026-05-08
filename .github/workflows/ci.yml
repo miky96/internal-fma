@@ -1,0 +1,39 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [master]
+
+# Cancel-la execucions antigues del mateix PR si en pugen de noves.
+concurrency:
+  group: pr-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run type-check
+
+      # Quan introdueixis Vitest i afegeixis l'script "test" a package.json,
+      # aquest step s'executara automaticament. Mentre no existeixi, npm el salta.
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build

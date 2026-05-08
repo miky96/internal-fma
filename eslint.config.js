@@ -1,7 +1,4 @@
 // Flat config per ESLint 9. Substitueix .eslintrc.json + tsconfig.eslint.json.
-// Sense Airbnb: regles modernes amb typescript-eslint + react + hooks + a11y.
-// Si en el futur volem regles més estrictes, és més fàcil afegir des d'aquí
-// que no pas debugar herència d'Airbnb amb plugins antics.
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';

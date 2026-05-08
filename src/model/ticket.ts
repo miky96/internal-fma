@@ -3,6 +3,10 @@ export interface Ticket {
   products: { id: number; name: string; quantity: number; price: number }[];
   total: number;
   createdAt: { seconds: number; nanoseconds: number };
+  // Camps denormalitzats afegits per permetre queries directes per dia/any.
+  // Poden no existir en tickets antics fins que s'hagi executat la migració.
+  businessDate?: string; // YYYY-MM-DD del dia de venda (tall a les 5h)
+  year?: number;         // any del dia de venda
 }
 
 export interface AggregatedData {
