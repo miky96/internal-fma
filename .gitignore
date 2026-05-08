@@ -11,6 +11,9 @@
 # build output (Vite)
 /dist
 
+# Vite config cache (fitxers temporals generats automàticament)
+vite.config.ts.timestamp-*
+
 # build output legacy (CRA - es pot eliminar quan no quedi rastre)
 /build
 

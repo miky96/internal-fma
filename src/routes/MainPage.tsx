@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import {
-  AppShell, Burger, Drawer, NavLink, Stack, Container, Image, Box, Group,
+  AppShell, Burger, Drawer, NavLink, Stack, Container, Box, Group,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -76,8 +76,28 @@ const MainPage: React.FC = () => {
           </Routes>
         </Container>
         {location.pathname === '/mainpage' && (
-          <Box display="flex" mih="80vh" style={{ justifyContent: 'center', alignItems: 'center' }}>
-            <Image src="/logo.jpeg" alt="Logo" fit="contain" mah="80vh" />
+          <Box
+            style={{
+              display: 'flex',
+              minHeight: '80vh',
+              width: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '24px 16px',
+            }}
+          >
+            <img
+              src="/logo.jpeg"
+              alt="Logo"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           </Box>
         )}
       </AppShell.Main>

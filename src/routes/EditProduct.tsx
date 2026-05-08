@@ -13,6 +13,7 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { db } from '../firebase/firestore';
 import { Product, ProductTypes, ProductTypesNames } from '../model/ticket';
+import { sortProductsByOrder, orderFieldFor, productOrder } from '../model/productOrdering';
 
 const showError = (message: string) => notifications.show({ color: 'red', message });
 const showOk = (message: string) => notifications.show({ color: 'green', message });
@@ -58,7 +59,9 @@ const EditProduct: React.FC = () => {
     setSelectedProduct(product);
     setEditName(product.name);
     setEditPrice(product.price);
-    setEditOrderId(product.order_id);
+    // L'ordre que veu l'usuari es sempre el del seu tipus (productOrder
+    // ja resol el fallback a `order_id` legacy).
+    setEditOrderId(productOrder(product));
     setEditType(product.type);
     setEditDialogOpen(true);
   };
@@ -75,11 +78,17 @@ const EditProduct: React.FC = () => {
       return;
     }
     try {
+      const orderField = orderFieldFor(editType);
+      const orderValue = Number(editOrderId) || 0;
       const productRef = doc(db, 'ticket_products', selectedProduct.id);
+      // Escrivim el camp d'ordre tipat (order_barra o order_merch) i mantenim
+      // `order_id` sincronitzat com a fallback per a clients que encara llegeixin
+      // el camp legacy.
       await updateDoc(productRef, {
         name: editName,
         price: Number(editPrice),
-        order_id: Number(editOrderId) || 0,
+        [orderField]: orderValue,
+        order_id: orderValue,
         type: editType,
       });
       localStorage.removeItem('all_products');
@@ -89,7 +98,8 @@ const EditProduct: React.FC = () => {
           ...p,
           name: editName,
           price: Number(editPrice),
-          order_id: Number(editOrderId) || 0,
+          [orderField]: orderValue,
+          order_id: orderValue,
           type: editType,
         }
         : p)));
@@ -110,12 +120,17 @@ const EditProduct: React.FC = () => {
       return;
     }
     try {
-      const newProduct = {
-        order_id: Number(newProductOrderId) || 0,
+      const orderField = orderFieldFor(newProductType);
+      const orderValue = Number(newProductOrderId) || 0;
+      // Pel mateix motiu que en l'edit: escrivim el camp tipat i a mes
+      // `order_id` com a fallback legacy.
+      const newProduct: Omit<Product, 'id'> = {
         name: newProductName,
         price: Number(newProductPrice),
         imageUrl: newProductImageUrl,
         type: newProductType,
+        [orderField]: orderValue,
+        order_id: orderValue,
       };
       const productRef = await addDoc(collection(db, 'ticket_products'), newProduct);
       localStorage.removeItem('all_products');
@@ -137,9 +152,12 @@ const EditProduct: React.FC = () => {
     setAddProductOpen(true);
   };
 
-  const sortedProducts = [...products].sort((a, b) => a.order_id - b.order_id);
-  const barraProducts = sortedProducts.filter((p) => p.type === ProductTypes.BARRA);
-  const merchandisingProducts = sortedProducts.filter((p) => p.type === ProductTypes.MERCHANDISING);
+  const barraProducts = sortProductsByOrder(
+    products.filter((p) => p.type === ProductTypes.BARRA),
+  );
+  const merchandisingProducts = sortProductsByOrder(
+    products.filter((p) => p.type === ProductTypes.MERCHANDISING),
+  );
 
   const renderProductGrid = (productList: Product[]) => (
     <Grid>
@@ -277,9 +295,11 @@ const EditProduct: React.FC = () => {
             onChange={(val) => setEditType(Number(val) as ProductTypes)}
           />
           <NumberInput
-            label="Id ordre del producte"
+            label={`Ordre dins de ${ProductTypesNames[editType]}`}
+            description="Posicio a la pestanya. Els valors mes baixos surten primer."
             value={editOrderId}
             onChange={(val) => setEditOrderId(val ?? 0)}
+            min={0}
             hideControls
           />
           <Group justify="flex-end" mt="md">
@@ -320,9 +340,11 @@ const EditProduct: React.FC = () => {
             onChange={(val) => setNewProductType(Number(val) as ProductTypes)}
           />
           <NumberInput
-            label="Id ordre del producte"
+            label={`Ordre dins de ${ProductTypesNames[newProductType]}`}
+            description="Posicio a la pestanya. Els valors mes baixos surten primer."
             value={newProductOrderId}
             onChange={(val) => setNewProductOrderId(val ?? 0)}
+            min={0}
             hideControls
           />
           <Group justify="flex-end" mt="md">

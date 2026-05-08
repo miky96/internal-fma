@@ -14,6 +14,7 @@ import { db } from '../firebase/firestore';
 import {
   Product, ProductTypes, ProductTypesNames, TicketItem,
 } from '../model/ticket';
+import { sortProductsByOrder } from '../model/productOrdering';
 import { businessDateKey, businessYear } from '../model/businessDate';
 
 const QUICK_AMOUNTS = [5, 10, 20, 50];
@@ -116,9 +117,14 @@ const AddTicket: React.FC = () => {
   const itemQuantity = (productId: string) => ticketItems
     .find((it) => it.id === productId)?.quantity ?? 0;
 
-  const sortedProducts = [...products].sort((a, b) => a.order_id - b.order_id);
-  const barraProducts = sortedProducts.filter((p) => p.type === ProductTypes.BARRA);
-  const merchandisingProducts = sortedProducts.filter((p) => p.type === ProductTypes.MERCHANDISING);
+  // Cada llista s'ordena pel seu propi camp d'ordre (order_barra / order_merch).
+  // sortProductsByOrder ja resol el fallback a `order_id` legacy.
+  const barraProducts = sortProductsByOrder(
+    products.filter((p) => p.type === ProductTypes.BARRA),
+  );
+  const merchandisingProducts = sortProductsByOrder(
+    products.filter((p) => p.type === ProductTypes.MERCHANDISING),
+  );
 
   const renderProductCard = (product: Product) => {
     const qty = itemQuantity(product.id);
