@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  collection, getDocs, addDoc, updateDoc, doc, query, orderBy, where, serverTimestamp,
+  collection, getDocs, addDoc, updateDoc, doc, query, orderBy, serverTimestamp,
 } from 'firebase/firestore';
 import {
-  Stack, Title, Group, Button, Table, Modal, TextInput, NumberInput, Select, Box,
+  Stack, Title, Group, Button, Modal, TextInput, Tabs, Grid, Box, Text, Badge, Paper,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
+import { IconPlus, IconBox, IconCalendarStats } from '@tabler/icons-react';
 import { db } from '../firebase/firestore';
+import ProductCard from '../components/inventory/ProductCard';
+import HistorySection from '../components/inventory/HistorySection';
+import { businessDayKey, todayBusinessDayKey } from '../components/inventory/businessDay';
 
 interface InventoryEntry {
   id: string;
@@ -27,9 +31,8 @@ const showOk = (message: string) => notifications.show({ color: 'green', message
 const Inventory: React.FC = () => {
   const [entries, setEntries] = useState<InventoryEntry[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [open, setOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<string | null>('');
-  const [quantity, setQuantity] = useState<number | string>('');
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductCategory, setNewProductCategory] = useState('');
@@ -37,144 +40,124 @@ const Inventory: React.FC = () => {
   useEffect(() => {
     const fetchEntries = async () => {
       const q = query(collection(db, 'inventoryEntries'), orderBy('date'));
-      const querySnapshot = await getDocs(q);
-      const entriesData = querySnapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as InventoryEntry[];
-      setEntries(entriesData);
+      const snap = await getDocs(q);
+      setEntries(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as InventoryEntry[]);
     };
     fetchEntries();
   }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const q = query(collection(db, 'products'));
-      const querySnapshot = await getDocs(q);
-      const productsData = querySnapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as Product[];
-      setProducts(productsData);
+      const snap = await getDocs(query(collection(db, 'products')));
+      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Product[]);
     };
     fetchProducts();
   }, []);
 
-  const categories = Array.from(new Set(products.map((p) => p.category)));
-  const getProductsByCategory = (category: string) => products
-    .filter((p) => p.category === category)
-    .map((p) => p.name);
+  const todayKey = todayBusinessDayKey();
 
-  const handleOpenDialog = () => {
-    setSelectedProduct('');
-    setQuantity('');
-    setOpen(true);
-  };
-  const handleCloseDialog = () => setOpen(false);
+  // Mapa productName -> entry d'avui (id, quantitat, ultima actualitzacio).
+  // Ho derivem de l'estat local; aixi un cop guardat ja es reflecteix sense
+  // tornar a consultar Firestore.
+  const todayByProduct = useMemo(() => {
+    const map = new Map<string, { id: string; quantity: number; updatedAt: Date }>();
+    entries.forEach((e) => {
+      const d = new Date(e.date.seconds * 1000);
+      if (businessDayKey(d) === todayKey) {
+        map.set(e.name, { id: e.id, quantity: e.quantity, updatedAt: d });
+      }
+    });
+    return map;
+  }, [entries, todayKey]);
 
-  const handleSaveEntry = async () => {
-    if (!selectedProduct || quantity === '') {
-      showError('Omple tots els camps');
-      return;
-    }
+  // Categories ordenades alfabeticament per estabilitat de les pestanyes.
+  const categories = useMemo(() => {
+    const set = new Set(products.map((p) => p.category));
+    return Array.from(set).sort();
+  }, [products]);
 
-    const now = new Date();
-    const entryDate = new Date();
-    entryDate.setHours(now.getHours() < 5 ? -1 : 0, 0, 0, 0);
+  // Productes per categoria, ordenats per nom.
+  const productsByCategory = useMemo(() => {
+    const out: { [category: string]: Product[] } = {};
+    categories.forEach((cat) => {
+      out[cat] = products
+        .filter((p) => p.category === cat)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    });
+    return out;
+  }, [products, categories]);
 
-    const entryTimestamp = {
-      seconds: Math.floor(entryDate.getTime() / 1000),
-      nanoseconds: 0,
-    };
+  // Per al component d'historic: nomes ens cal el llistat de noms per categoria.
+  const productNamesByCategory = useMemo(() => {
+    const out: { [category: string]: string[] } = {};
+    Object.entries(productsByCategory).forEach(([cat, list]) => {
+      out[cat] = list.map((p) => p.name);
+    });
+    return out;
+  }, [productsByCategory]);
 
+  // Estructura plana per al render historic (data -> producte -> quantitat).
+  const groupedEntries = useMemo(() => {
+    const out: { [date: string]: { [productName: string]: number } } = {};
+    entries.forEach((e) => {
+      const d = new Date(e.date.seconds * 1000);
+      const key = businessDayKey(d);
+      if (!out[key]) out[key] = {};
+      out[key][e.name] = e.quantity;
+    });
+    return out;
+  }, [entries]);
+
+  // Si encara no hi ha pestanya activa pero ja tenim categories, en defaultem una.
+  useEffect(() => {
+    if (!activeTab && categories.length > 0) setActiveTab(categories[0]);
+  }, [activeTab, categories]);
+
+  // Comptador d'actualitzacions d'avui per categoria (per al badge a la pestanya).
+  const todayCountByCategory = useMemo(() => {
+    const out: { [cat: string]: { done: number; total: number } } = {};
+    categories.forEach((cat) => {
+      const list = productsByCategory[cat] ?? [];
+      const done = list.filter((p) => todayByProduct.has(p.name)).length;
+      out[cat] = { done, total: list.length };
+    });
+    return out;
+  }, [categories, productsByCategory, todayByProduct]);
+
+  const handleSaveQuantity = async (productName: string, qty: number) => {
+    const existing = todayByProduct.get(productName);
     try {
-      const q = query(
-        collection(db, 'inventoryEntries'),
-        where('name', '==', selectedProduct),
-        where('date', '>=', entryTimestamp),
-        where('date', '<', { seconds: entryTimestamp.seconds + 86400, nanoseconds: 0 }),
-      );
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const existingEntry = querySnapshot.docs[0];
-        const entryRef = doc(db, 'inventoryEntries', existingEntry.id);
-        await updateDoc(entryRef, {
-          quantity: Number(quantity),
-          date: serverTimestamp(),
-        });
-        setEntries(entries.map((entry) => (entry.id === existingEntry.id
-          ? { ...entry, quantity: Number(quantity), date: { seconds: Date.now() / 1000, nanoseconds: 0 } }
-          : entry)));
+      if (existing) {
+        const ref = doc(db, 'inventoryEntries', existing.id);
+        await updateDoc(ref, { quantity: qty, date: serverTimestamp() });
+        setEntries((prev) => prev.map((e) => (e.id === existing.id
+          ? { ...e, quantity: qty, date: { seconds: Date.now() / 1000, nanoseconds: 0 } }
+          : e)));
       } else {
-        const entryRef = await addDoc(collection(db, 'inventoryEntries'), {
-          name: selectedProduct,
-          quantity: Number(quantity),
+        const ref = await addDoc(collection(db, 'inventoryEntries'), {
+          name: productName,
+          quantity: qty,
           date: serverTimestamp(),
         });
-        setEntries([...entries, {
-          id: entryRef.id,
-          name: selectedProduct,
-          quantity: Number(quantity),
+        setEntries((prev) => [...prev, {
+          id: ref.id,
+          name: productName,
+          quantity: qty,
           date: { seconds: Date.now() / 1000, nanoseconds: 0 },
         }]);
       }
-
-      showOk('Producte inventari actualitzat correctament!');
-      handleCloseDialog();
-    } catch (error) {
-      console.error('Error guardant entrada inventari: ', error);
-      showError('Error guardant entrada inventari');
+      showOk(`${productName}: ${qty}`);
+    } catch (err) {
+      console.error('Error guardant entrada inventari:', err);
+      showError('Error guardant la quantitat');
+      throw err;
     }
-  };
-
-  const adjustDateTo5AM = (date: Date): Date => {
-    const adjustedDate = new Date(date);
-    adjustedDate.setHours(date.getHours() < 5 ? -1 : 0, 0, 0, 0);
-    return adjustedDate;
-  };
-
-  const groupedEntries = entries.reduce((acc, entry) => {
-    const entryDate = new Date(entry.date.seconds * 1000);
-    const adjustedDate = adjustDateTo5AM(entryDate).toLocaleDateString();
-    if (!acc[adjustedDate]) acc[adjustedDate] = {};
-    acc[adjustedDate][entry.name] = entry.quantity;
-    return acc;
-  }, {} as { [date: string]: { [productName: string]: number } });
-
-  const renderTable = (category: string, categoryName: string) => {
-    const productNames = getProductsByCategory(category);
-    return (
-      <Box mt="md" w="100%" key={category}>
-        <Title order={4} mb="xs">{categoryName}</Title>
-        <Table withTableBorder withColumnBorders striped>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Date</Table.Th>
-              {productNames.map((name) => (
-                <Table.Th key={name}>{name}</Table.Th>
-              ))}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {Object.keys(groupedEntries).map((date) => (
-              <Table.Tr key={date}>
-                <Table.Td>{date}</Table.Td>
-                {productNames.map((name) => (
-                  <Table.Td key={name}>{groupedEntries[date][name] || 0}</Table.Td>
-                ))}
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Box>
-    );
   };
 
   const handleOpenNewProductDialog = () => {
     setNewProductDialogOpen(true);
     setNewProductName('');
-    setNewProductCategory('');
+    setNewProductCategory(activeTab ?? '');
   };
   const handleCloseNewProductDialog = () => {
     setNewProductDialogOpen(false);
@@ -192,7 +175,10 @@ const Inventory: React.FC = () => {
         name: newProductName,
         category: newProductCategory,
       });
-      setProducts([...products, { id: docRef.id, name: newProductName, category: newProductCategory }]);
+      setProducts((prev) => [...prev, {
+        id: docRef.id, name: newProductName, category: newProductCategory,
+      }]);
+      setActiveTab(newProductCategory);
       showOk('Producte afegit correctament!');
       handleCloseNewProductDialog();
     } catch {
@@ -200,57 +186,136 @@ const Inventory: React.FC = () => {
     }
   };
 
-  const productOptions = products.map((p) => ({ value: p.name, label: p.name }));
+  const formattedToday = new Date().toLocaleDateString('ca-ES', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
 
   return (
-    <Stack align="center" mt="md" gap="md">
-      <Title order={2}>Inventari</Title>
-      <Group>
-        <Button color="blue" onClick={handleOpenDialog}>Actualitza quantitat</Button>
-        <Button variant="outline" color="grape" onClick={handleOpenNewProductDialog}>Nou producte</Button>
+    <Stack mt="md" gap="md" w="100%">
+      <Group justify="space-between" wrap="wrap" gap="xs">
+        <Stack gap={2}>
+          <Title order={2}>Inventari</Title>
+          <Group gap={6} c="dimmed">
+            <IconCalendarStats size={14} />
+            <Text size="sm" tt="capitalize">{formattedToday}</Text>
+          </Group>
+        </Stack>
+        <Button
+          color="indigo"
+          leftSection={<IconPlus size={16} />}
+          onClick={handleOpenNewProductDialog}
+        >
+          Nou producte
+        </Button>
       </Group>
 
-      {categories.map((cat) => renderTable(cat, cat))}
+      {categories.length === 0 ? (
+        <Paper withBorder p="xl" radius="md">
+          <Stack align="center" gap="xs">
+            <IconBox size={36} style={{ opacity: 0.4 }} />
+            <Text c="dimmed">Encara no hi ha productes. Comenca creant-ne un.</Text>
+            <Button
+              variant="light"
+              color="indigo"
+              leftSection={<IconPlus size={16} />}
+              onClick={handleOpenNewProductDialog}
+            >
+              Nou producte
+            </Button>
+          </Stack>
+        </Paper>
+      ) : (
+        <Tabs
+          value={activeTab}
+          onChange={setActiveTab}
+          variant="pills"
+          radius="md"
+          keepMounted={false}
+        >
+          <Tabs.List style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
+            {categories.map((cat) => {
+              const c = todayCountByCategory[cat];
+              return (
+                <Tabs.Tab
+                  key={cat}
+                  value={cat}
+                  rightSection={(
+                    <Badge
+                      size="xs"
+                      variant={c.done === c.total && c.total > 0 ? 'filled' : 'light'}
+                      color={c.done === c.total && c.total > 0 ? 'teal' : 'gray'}
+                    >
+                      {c.done}
+                      /
+                      {c.total}
+                    </Badge>
+                  )}
+                >
+                  {cat}
+                </Tabs.Tab>
+              );
+            })}
+          </Tabs.List>
 
-      <Modal opened={newProductDialogOpen} onClose={handleCloseNewProductDialog} title="Nou producte" centered>
+          {categories.map((cat) => (
+            <Tabs.Panel key={cat} value={cat} pt="md">
+              <Grid>
+                {productsByCategory[cat].map((p) => {
+                  const todayInfo = todayByProduct.get(p.name);
+                  return (
+                    <Grid.Col key={p.id} span={{ base: 6, sm: 4, md: 3 }}>
+                      <ProductCard
+                        productName={p.name}
+                        todayQuantity={todayInfo ? todayInfo.quantity : null}
+                        lastUpdatedAt={todayInfo ? todayInfo.updatedAt : null}
+                        onSave={(qty) => handleSaveQuantity(p.name, qty)}
+                      />
+                    </Grid.Col>
+                  );
+                })}
+              </Grid>
+              {productsByCategory[cat].length === 0 && (
+                <Text c="dimmed" size="sm" ta="center" py="md">
+                  No hi ha productes en aquesta categoria.
+                </Text>
+              )}
+            </Tabs.Panel>
+          ))}
+        </Tabs>
+      )}
+
+      <HistorySection
+        groupedEntries={groupedEntries}
+        productNamesByCategory={productNamesByCategory}
+        todayKey={todayKey}
+      />
+
+      <Modal
+        opened={newProductDialogOpen}
+        onClose={handleCloseNewProductDialog}
+        title="Nou producte"
+      >
         <Stack>
           <TextInput
             label="Nom"
             value={newProductName}
             onChange={(e) => setNewProductName(e.currentTarget.value)}
+            data-autofocus
           />
           <TextInput
             label="Categoria"
             value={newProductCategory}
             onChange={(e) => setNewProductCategory(e.currentTarget.value)}
+            placeholder="ex. Begudes, Menjar, ..."
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={handleCloseNewProductDialog}>Cancel·lar</Button>
-            <Button color="blue" onClick={handleAddNewProduct}>Afegeix</Button>
+            <Button color="indigo" onClick={handleAddNewProduct}>Afegeix</Button>
           </Group>
         </Stack>
       </Modal>
 
-      <Modal opened={open} onClose={handleCloseDialog} title="Afegeix o Actualitza" centered>
-        <Stack>
-          <Select
-            placeholder="Selecciona un producte"
-            data={productOptions}
-            value={selectedProduct}
-            onChange={(val) => setSelectedProduct(val)}
-            searchable
-          />
-          <NumberInput
-            label="Quantitat"
-            value={quantity}
-            onChange={(val) => setQuantity(val ?? '')}
-          />
-          <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={handleCloseDialog}>Cancel·lar</Button>
-            <Button color="blue" onClick={handleSaveEntry}>Guarda</Button>
-          </Group>
-        </Stack>
-      </Modal>
+      <Box style={{ height: 24 }} />
     </Stack>
   );
 };
