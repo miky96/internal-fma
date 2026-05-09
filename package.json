@@ -35,6 +35,9 @@
     "vitest": "^2.1.9"
   },
   "scripts": {
+    "clean:vite-temp": "node scripts/clean-vite-temp.mjs",
+    "predev": "npm run clean:vite-temp",
+    "prebuild": "npm run clean:vite-temp",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

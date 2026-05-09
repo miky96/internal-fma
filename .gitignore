@@ -8,11 +8,12 @@
 # testing
 /coverage
 
-# build output (Vite)
-/dist
+# build output (Vite) — cobreix dist, dist-verify, dist-prod, etc.
+/dist*
 
 # Vite config cache (fitxers temporals generats automàticament)
 vite.config.ts.timestamp-*
+**/.vite-temp/
 
 # build output legacy (CRA - es pot eliminar quan no quedi rastre)
 /build
