@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Paper, Stack, Text, NumberInput, Button, Group, Popover, Box,
+  Paper, Stack, Text, NumberInput, Button, Group, Popover, Box, Anchor,
 } from '@mantine/core';
 import { IconPencil, IconClock, IconCircleCheck } from '@tabler/icons-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,23 +10,29 @@ interface ProductCardProps {
   productName: string;
   todayQuantity: number | null;
   lastUpdatedAt?: Date | null;
+  opened: boolean;
+  onOpenChange: (opened: boolean) => void;
   onSave: (qty: number) => Promise<void>;
+  onEditName: () => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
-  productName, todayQuantity, lastUpdatedAt, onSave,
+  productName, todayQuantity, lastUpdatedAt, opened, onOpenChange, onSave, onEditName,
 }) => {
-  const [opened, setOpened] = useState(false);
   const [draft, setDraft] = useState<number | string>(todayQuantity ?? '');
   const [saving, setSaving] = useState(false);
 
-  // Quan s'obre el popover, sincronitzem el draft amb el valor actual.
   useEffect(() => {
     if (opened) setDraft(todayQuantity ?? '');
   }, [opened, todayQuantity]);
 
   const handleClose = () => {
-    if (!saving) setOpened(false);
+    if (!saving) onOpenChange(false);
+  };
+
+  const handleToggle = () => {
+    if (saving) return;
+    onOpenChange(!opened);
   };
 
   const handleSave = async () => {
@@ -34,10 +40,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
     setSaving(true);
     try {
       await onSave(Number(draft));
-      setOpened(false);
+      onOpenChange(false);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditName = () => {
+    onOpenChange(false);
+    onEditName();
   };
 
   const hasToday = todayQuantity !== null;
@@ -60,7 +71,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           withBorder
           radius="md"
           p="sm"
-          onClick={() => setOpened((v) => !v)}
+          onClick={handleToggle}
           style={{
             cursor: 'pointer',
             borderColor: accent,
@@ -110,7 +121,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
       <Popover.Dropdown>
         <Stack gap="xs">
-          <Text size="sm" fw={600}>{productName}</Text>
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Text size="sm" fw={600} lineClamp={1}>{productName}</Text>
+            <Anchor
+              component="button"
+              type="button"
+              size="xs"
+              onClick={handleEditName}
+              disabled={saving}
+            >
+              Edita nom
+            </Anchor>
+          </Group>
           <NumberInput
             value={draft}
             onChange={(v) => setDraft(v ?? '')}

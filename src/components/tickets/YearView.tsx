@@ -1,5 +1,5 @@
 import React, {
-  useState, useEffect, useMemo, useCallback,
+  useState, useEffect, useMemo,
 } from 'react';
 import {
   collection, query, where, getDocs,
@@ -9,6 +9,7 @@ import {
   Select, Box, SimpleGrid,
 } from '@mantine/core';
 import { IconCash, IconReceipt2, IconCalendar } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { db } from '../../firebase/firestore';
 import { Ticket } from '../../model/ticket';
 import {
@@ -17,12 +18,12 @@ import {
 import { businessYear } from '../../model/businessDate';
 import KpiTile, { formatEur } from './KpiTile';
 
-const YEARS_BACK = 5;
+const MIN_YEAR = 2025;
 
 const buildYearOptions = (): { value: string; label: string }[] => {
   const current = businessYear(new Date());
   const opts: { value: string; label: string }[] = [];
-  for (let y = current; y >= current - YEARS_BACK; y -= 1) {
+  for (let y = current; y >= MIN_YEAR; y -= 1) {
     opts.push({ value: String(y), label: String(y) });
   }
   return opts;
@@ -33,21 +34,42 @@ const YearView: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchYear = useCallback(async (y: number) => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'tickets'), where('year', '==', y));
-      const snap = await getDocs(q);
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Ticket[];
-      setTickets(data);
-    } catch (e) {
-      console.error('Error carregant tickets de l\'any:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchYear(year); }, [year, fetchYear]);
+  // Fetch de l'any amb cleanup + timeout. Mateix raonament que a DayView:
+  // - cleanup amb `cancelled` evita setState sobre closures obsoletes quan
+  //   l'usuari canvia de tab o d'any abans que resolgui la query.
+  // - timeout de 12s rescata el cas en què Firestore deixa la query penjada
+  //   (típic després d'un delete a DayView i canvi immediat a YearView, on
+  //   l'stream gRPC queda esperant un ack del cache local).
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(db, 'tickets'), where('year', '==', year));
+        const snap = await Promise.race([
+          getDocs(q),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('timeout')), 12000);
+          }),
+        ]);
+        if (cancelled) return;
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Ticket[];
+        setTickets(data);
+      } catch (e) {
+        if (cancelled) return;
+        console.error('Error carregant tickets de l\'any:', e);
+        notifications.show({
+          id: 'year-fetch-error',
+          color: 'red',
+          message: 'Error carregant tickets de l\'any. Reintenta.',
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [year]);
 
   const aggregated = useMemo(() => aggregateByDay(tickets), [tickets]);
   const productNames = useMemo(() => productNamesFrom(tickets), [tickets]);
@@ -118,9 +140,8 @@ const YearView: React.FC = () => {
                           <Table.Td key={name}>{d.products[name] || 0}</Table.Td>
                         ))}
                         <Table.Td>
-                          <Text fw={600} c="indigo.7">
-                            {d.totalMoney.toFixed(2)}
-                            {' €'}
+                          <Text fw={600} c="indigo.7" style={{ whiteSpace: 'nowrap' }}>
+                            {formatEur(d.totalMoney)}
                           </Text>
                         </Table.Td>
                       </Table.Tr>

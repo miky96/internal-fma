@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   collection, getDocs, addDoc, updateDoc, doc, query, orderBy, serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   Stack, Title, Group, Button, Modal, TextInput, Tabs, Grid, Box, Text, Badge, Paper,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconPlus, IconBox, IconCalendarStats } from '@tabler/icons-react';
+import {
+  IconPlus, IconBox, IconCalendarStats, IconFolderPlus,
+} from '@tabler/icons-react';
 import { db } from '../firebase/firestore';
 import ProductCard from '../components/inventory/ProductCard';
 import HistorySection from '../components/inventory/HistorySection';
@@ -28,20 +31,60 @@ interface Product {
 const showError = (message: string) => notifications.show({ color: 'red', message });
 const showOk = (message: string) => notifications.show({ color: 'green', message });
 
+// Esborra documents en lots de 400 per evitar el limit de 500 ops/batch a Firestore.
+const deleteEntriesInChunks = async (ids: string[]) => {
+  const CHUNK = 400;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const batch = writeBatch(db);
+    slice.forEach((id) => batch.delete(doc(db, 'inventoryEntries', id)));
+    await batch.commit();
+  }
+};
+
 const Inventory: React.FC = () => {
   const [entries, setEntries] = useState<InventoryEntry[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
+  // Quin popover esta obert (nomes un alhora). Si null, cap.
+  const [openProductName, setOpenProductName] = useState<string | null>(null);
+
+  // Modal Nou producte
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductCategory, setNewProductCategory] = useState('');
+
+  // Modal Nova categoria
+  const [newCategoryDialogOpen, setNewCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryFirstProduct, setNewCategoryFirstProduct] = useState('');
+
+  // Modal Edita nom de producte
+  const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProductName, setEditingProductName] = useState('');
 
   useEffect(() => {
     const fetchEntries = async () => {
       const q = query(collection(db, 'inventoryEntries'), orderBy('date'));
       const snap = await getDocs(q);
-      setEntries(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as InventoryEntry[]);
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as InventoryEntry[];
+      const currentYear = new Date().getFullYear();
+      const isCurrentYear = (e: InventoryEntry) => (
+        new Date(e.date.seconds * 1000).getFullYear() === currentYear
+      );
+      const current = all.filter(isCurrentYear);
+      const old = all.filter((e) => !isCurrentYear(e));
+      setEntries(current);
+      // Neteja en background de les entries d'altres anys.
+      if (old.length > 0) {
+        try {
+          await deleteEntriesInChunks(old.map((e) => e.id));
+        } catch (err) {
+          console.error('Error esborrant entries d\'anys anteriors:', err);
+        }
+      }
     };
     fetchEntries();
   }, []);
@@ -56,9 +99,6 @@ const Inventory: React.FC = () => {
 
   const todayKey = todayBusinessDayKey();
 
-  // Mapa productName -> entry d'avui (id, quantitat, ultima actualitzacio).
-  // Ho derivem de l'estat local; aixi un cop guardat ja es reflecteix sense
-  // tornar a consultar Firestore.
   const todayByProduct = useMemo(() => {
     const map = new Map<string, { id: string; quantity: number; updatedAt: Date }>();
     entries.forEach((e) => {
@@ -70,13 +110,11 @@ const Inventory: React.FC = () => {
     return map;
   }, [entries, todayKey]);
 
-  // Categories ordenades alfabeticament per estabilitat de les pestanyes.
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category));
     return Array.from(set).sort();
   }, [products]);
 
-  // Productes per categoria, ordenats per nom.
   const productsByCategory = useMemo(() => {
     const out: { [category: string]: Product[] } = {};
     categories.forEach((cat) => {
@@ -87,7 +125,6 @@ const Inventory: React.FC = () => {
     return out;
   }, [products, categories]);
 
-  // Per al component d'historic: nomes ens cal el llistat de noms per categoria.
   const productNamesByCategory = useMemo(() => {
     const out: { [category: string]: string[] } = {};
     Object.entries(productsByCategory).forEach(([cat, list]) => {
@@ -96,7 +133,6 @@ const Inventory: React.FC = () => {
     return out;
   }, [productsByCategory]);
 
-  // Estructura plana per al render historic (data -> producte -> quantitat).
   const groupedEntries = useMemo(() => {
     const out: { [date: string]: { [productName: string]: number } } = {};
     entries.forEach((e) => {
@@ -108,12 +144,14 @@ const Inventory: React.FC = () => {
     return out;
   }, [entries]);
 
-  // Si encara no hi ha pestanya activa pero ja tenim categories, en defaultem una.
   useEffect(() => {
     if (!activeTab && categories.length > 0) setActiveTab(categories[0]);
   }, [activeTab, categories]);
 
-  // Comptador d'actualitzacions d'avui per categoria (per al badge a la pestanya).
+  useEffect(() => {
+    setOpenProductName(null);
+  }, [activeTab]);
+
   const todayCountByCategory = useMemo(() => {
     const out: { [cat: string]: { done: number; total: number } } = {};
     categories.forEach((cat) => {
@@ -155,9 +193,15 @@ const Inventory: React.FC = () => {
   };
 
   const handleOpenNewProductDialog = () => {
+    if (!activeTab) {
+      setNewCategoryDialogOpen(true);
+      setNewCategoryName('');
+      setNewCategoryFirstProduct('');
+      return;
+    }
     setNewProductDialogOpen(true);
     setNewProductName('');
-    setNewProductCategory(activeTab ?? '');
+    setNewProductCategory(activeTab);
   };
   const handleCloseNewProductDialog = () => {
     setNewProductDialogOpen(false);
@@ -166,23 +210,106 @@ const Inventory: React.FC = () => {
   };
 
   const handleAddNewProduct = async () => {
-    if (!newProductName || !newProductCategory) {
-      showError('Omple tots els camps del producte nou');
+    if (!newProductName.trim() || !newProductCategory) {
+      showError('Omple el nom del producte');
       return;
     }
     try {
       const docRef = await addDoc(collection(db, 'products'), {
-        name: newProductName,
+        name: newProductName.trim(),
         category: newProductCategory,
       });
       setProducts((prev) => [...prev, {
-        id: docRef.id, name: newProductName, category: newProductCategory,
+        id: docRef.id, name: newProductName.trim(), category: newProductCategory,
       }]);
       setActiveTab(newProductCategory);
       showOk('Producte afegit correctament!');
       handleCloseNewProductDialog();
     } catch {
       showError('Error afegint producte nou');
+    }
+  };
+
+  const handleOpenNewCategoryDialog = () => {
+    setNewCategoryDialogOpen(true);
+    setNewCategoryName('');
+    setNewCategoryFirstProduct('');
+  };
+  const handleCloseNewCategoryDialog = () => {
+    setNewCategoryDialogOpen(false);
+    setNewCategoryName('');
+    setNewCategoryFirstProduct('');
+  };
+
+  const handleAddNewCategory = async () => {
+    const cat = newCategoryName.trim();
+    const prod = newCategoryFirstProduct.trim();
+    if (!cat || !prod) {
+      showError('Omple el nom de la categoria i del primer producte');
+      return;
+    }
+    if (categories.includes(cat)) {
+      showError('Aquesta categoria ja existeix');
+      return;
+    }
+    try {
+      const docRef = await addDoc(collection(db, 'products'), {
+        name: prod,
+        category: cat,
+      });
+      setProducts((prev) => [...prev, { id: docRef.id, name: prod, category: cat }]);
+      setActiveTab(cat);
+      showOk('Categoria creada!');
+      handleCloseNewCategoryDialog();
+    } catch (err) {
+      console.error('Error creant categoria:', err);
+      showError('Error creant la categoria');
+    }
+  };
+
+  const handleOpenEditNameDialog = (product: Product) => {
+    setEditingProduct(product);
+    setEditingProductName(product.name);
+    setEditNameDialogOpen(true);
+  };
+  const handleCloseEditNameDialog = () => {
+    setEditNameDialogOpen(false);
+    setEditingProduct(null);
+    setEditingProductName('');
+  };
+
+  const handleSaveEditName = async () => {
+    if (!editingProduct) return;
+    const oldName = editingProduct.name;
+    const newName = editingProductName.trim();
+    if (!newName) {
+      showError('El nom no pot estar buit');
+      return;
+    }
+    if (newName === oldName) {
+      handleCloseEditNameDialog();
+      return;
+    }
+    if (products.some((p) => p.id !== editingProduct.id && p.name === newName)) {
+      showError('Ja existeix un producte amb aquest nom');
+      return;
+    }
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'products', editingProduct.id), { name: newName });
+      entries.filter((e) => e.name === oldName).forEach((e) => {
+        batch.update(doc(db, 'inventoryEntries', e.id), { name: newName });
+      });
+      await batch.commit();
+      setProducts((prev) => prev.map((p) => (
+        p.id === editingProduct.id ? { ...p, name: newName } : p
+      )));
+      setEntries((prev) => prev.map((e) => (e.name === oldName ? { ...e, name: newName } : e)));
+      showOk('Producte renombrat');
+      handleCloseEditNameDialog();
+    } catch (err) {
+      console.error('Error renombrant producte:', err);
+      showError('Error renombrant el producte');
     }
   };
 
@@ -200,27 +327,38 @@ const Inventory: React.FC = () => {
             <Text size="sm" tt="capitalize">{formattedToday}</Text>
           </Group>
         </Stack>
-        <Button
-          color="indigo"
-          leftSection={<IconPlus size={16} />}
-          onClick={handleOpenNewProductDialog}
-        >
-          Nou producte
-        </Button>
+        <Group gap="xs">
+          <Button
+            variant="light"
+            color="indigo"
+            leftSection={<IconFolderPlus size={16} />}
+            onClick={handleOpenNewCategoryDialog}
+          >
+            Nova categoria
+          </Button>
+          <Button
+            color="indigo"
+            leftSection={<IconPlus size={16} />}
+            onClick={handleOpenNewProductDialog}
+            disabled={categories.length === 0}
+          >
+            Nou producte
+          </Button>
+        </Group>
       </Group>
 
       {categories.length === 0 ? (
         <Paper withBorder p="xl" radius="md">
           <Stack align="center" gap="xs">
             <IconBox size={36} style={{ opacity: 0.4 }} />
-            <Text c="dimmed">Encara no hi ha productes. Comenca creant-ne un.</Text>
+            <Text c="dimmed">Encara no hi ha categories. Comenca creant-ne una.</Text>
             <Button
               variant="light"
               color="indigo"
-              leftSection={<IconPlus size={16} />}
-              onClick={handleOpenNewProductDialog}
+              leftSection={<IconFolderPlus size={16} />}
+              onClick={handleOpenNewCategoryDialog}
             >
-              Nou producte
+              Nova categoria
             </Button>
           </Stack>
         </Paper>
@@ -268,7 +406,10 @@ const Inventory: React.FC = () => {
                         productName={p.name}
                         todayQuantity={todayInfo ? todayInfo.quantity : null}
                         lastUpdatedAt={todayInfo ? todayInfo.updatedAt : null}
+                        opened={openProductName === p.name}
+                        onOpenChange={(o) => setOpenProductName(o ? p.name : null)}
                         onSave={(qty) => handleSaveQuantity(p.name, qty)}
+                        onEditName={() => handleOpenEditNameDialog(p)}
                       />
                     </Grid.Col>
                   );
@@ -290,6 +431,7 @@ const Inventory: React.FC = () => {
         todayKey={todayKey}
       />
 
+      {/* Modal Nou producte: categoria fixa = pestanya activa */}
       <Modal
         opened={newProductDialogOpen}
         onClose={handleCloseNewProductDialog}
@@ -297,20 +439,74 @@ const Inventory: React.FC = () => {
       >
         <Stack>
           <TextInput
+            label="Categoria"
+            value={newProductCategory}
+            disabled
+            description="La categoria es la de la pestanya activa i no es pot canviar des d'aqui."
+          />
+          <TextInput
             label="Nom"
             value={newProductName}
             onChange={(e) => setNewProductName(e.currentTarget.value)}
             data-autofocus
-          />
-          <TextInput
-            label="Categoria"
-            value={newProductCategory}
-            onChange={(e) => setNewProductCategory(e.currentTarget.value)}
-            placeholder="ex. Begudes, Menjar, ..."
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddNewProduct(); }}
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={handleCloseNewProductDialog}>Cancel·lar</Button>
             <Button color="indigo" onClick={handleAddNewProduct}>Afegeix</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal Nova categoria: nom + primer producte */}
+      <Modal
+        opened={newCategoryDialogOpen}
+        onClose={handleCloseNewCategoryDialog}
+        title="Nova categoria"
+      >
+        <Stack>
+          <TextInput
+            label="Nom de la categoria"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.currentTarget.value)}
+            placeholder="ex. Begudes, Menjar, Merchan, ..."
+            data-autofocus
+          />
+          <TextInput
+            label="Primer producte de la categoria"
+            value={newCategoryFirstProduct}
+            onChange={(e) => setNewCategoryFirstProduct(e.currentTarget.value)}
+            placeholder="ex. Cocacola, Samarreta, ..."
+            description="Una categoria nomes existeix si te com a minim un producte."
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddNewCategory(); }}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={handleCloseNewCategoryDialog}>Cancel·lar</Button>
+            <Button color="indigo" onClick={handleAddNewCategory}>Crea</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal Edita nom de producte */}
+      <Modal
+        opened={editNameDialogOpen}
+        onClose={handleCloseEditNameDialog}
+        title="Edita nom del producte"
+      >
+        <Stack>
+          <TextInput
+            label="Nou nom"
+            value={editingProductName}
+            onChange={(e) => setEditingProductName(e.currentTarget.value)}
+            data-autofocus
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEditName(); }}
+          />
+          <Text size="xs" c="dimmed">
+            També s&apos;actualitzaran les entrades de l&apos;historic amb el nom antic.
+          </Text>
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={handleCloseEditNameDialog}>Cancel·lar</Button>
+            <Button color="indigo" onClick={handleSaveEditName}>Guarda</Button>
           </Group>
         </Stack>
       </Modal>

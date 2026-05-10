@@ -79,8 +79,18 @@ const AddTicket: React.FC = () => {
   }, [moneyReceived, totalNum]);
 
   const handleSaveTicket = async () => {
+    // Guard de reentrada: en mòbil un double-tap pot disparar onClick dues
+    // vegades abans que React commiti setSaving(true) i Mantine acaba apilant
+    // dues notificacions amb el mateix contingut, una de les quals pot
+    // renderitzar-se en blanc. Tallem aquí abans que entri al fluxe de save.
+    if (saving) return;
+
     if (ticketItems.length === 0) {
-      notifications.show({ color: 'red', message: 'Encara no hi ha cap producte al ticket.' });
+      notifications.show({
+        id: 'ticket-empty',
+        color: 'red',
+        message: 'Encara no hi ha cap producte al ticket.',
+      });
       return;
     }
 
@@ -104,10 +114,25 @@ const AddTicket: React.FC = () => {
       });
       setTicketItems([]);
       setMoneyReceived('');
-      notifications.show({ color: 'green', message: 'Ticket guardat correctament!' });
+      // id estable: si arriba un segon show amb el mateix id, Mantine
+      // reemplaça la notificació en lloc de superposar-ne una en blanc.
+      // title separat garanteix que sempre quedi alguna cosa visible
+      // encara que el message tingui un glitch d'animació.
+      notifications.show({
+        id: 'ticket-saved',
+        color: 'green',
+        title: 'Ticket guardat',
+        message: 'Guardat correctament.',
+        autoClose: 2500,
+        withBorder: true,
+      });
     } catch (error) {
       console.error('Error guardant ticket: ', error);
-      notifications.show({ color: 'red', message: 'Error guardant ticket. Torna-ho a intentar.' });
+      notifications.show({
+        id: 'ticket-error',
+        color: 'red',
+        message: 'Error guardant ticket. Torna-ho a intentar.',
+      });
       setMoneyReceived('');
     } finally {
       setSaving(false);

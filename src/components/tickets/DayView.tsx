@@ -1,5 +1,5 @@
 import React, {
-  useState, useEffect, useMemo, useContext, useCallback,
+  useState, useEffect, useMemo, useContext,
 } from 'react';
 import {
   collection, query, where, getDocs, deleteDoc, doc,
@@ -38,22 +38,46 @@ const DayView: React.FC = () => {
   const { currentUser } = useContext(AuthContext);
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
 
-  const fetchDay = useCallback(async (day: string) => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'tickets'), where('businessDate', '==', day));
-      const snap = await getDocs(q);
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Ticket[];
-      setTickets(data);
-    } catch (e) {
-      console.error('Error carregant tickets del dia:', e);
-      notifications.show({ color: 'red', message: 'Error carregant tickets del dia.' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchDay(selectedDay); }, [selectedDay, fetchDay]);
+  // Fetch del dia amb cleanup + timeout.
+  //
+  // Per què aquest patró i no un useCallback + fetch "lliure":
+  // 1) Cleanup amb flag `cancelled`: si l'usuari canvia de dia o de tab abans
+  //    que la query resolgui, ignorem el resultat tardà. Evita setStates sobre
+  //    closures obsoletes i el clàssic bug de "veure dades del dia anterior".
+  // 2) Timeout de 12s: la SDK de Firestore web multiplexa queries sobre un
+  //    únic stream gRPC; després d'un delete + canvi de tab la query nova pot
+  //    quedar penjada sense rebutjar mai. Sense aquest rescat, `loading` es
+  //    quedava a true per sempre (el bug que ens portava aquí).
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(db, 'tickets'), where('businessDate', '==', selectedDay));
+        const snap = await Promise.race([
+          getDocs(q),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('timeout')), 12000);
+          }),
+        ]);
+        if (cancelled) return;
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Ticket[];
+        setTickets(data);
+      } catch (e) {
+        if (cancelled) return;
+        console.error('Error carregant tickets del dia:', e);
+        notifications.show({
+          id: 'day-fetch-error',
+          color: 'red',
+          message: 'Error carregant tickets del dia. Reintenta.',
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [selectedDay]);
 
   const dayKpis = useMemo(() => {
     const total = sumTotal(tickets);
