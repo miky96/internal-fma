@@ -20,30 +20,33 @@ const ProductCard: React.FC<ProductCardProps> = ({
   productName, todayQuantity, lastUpdatedAt, opened, onOpenChange, onSave, onEditName,
 }) => {
   const [draft, setDraft] = useState<number | string>(todayQuantity ?? '');
-  const [saving, setSaving] = useState(false);
 
+  // Nomes reinicialitzem el draft quan el popover s'obre. Si depenem tambe de
+  // todayQuantity, el re-render del pare durant el guardat (que actualitza
+  // todayByProduct) fa que aquest effect dispari un setDraft mentre el
+  // Popover encara esta visible, causant flickers d'animacio.
   useEffect(() => {
     if (opened) setDraft(todayQuantity ?? '');
-  }, [opened, todayQuantity]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opened]);
 
   const handleClose = () => {
-    if (!saving) onOpenChange(false);
+    onOpenChange(false);
   };
 
   const handleToggle = () => {
-    if (saving) return;
     onOpenChange(!opened);
   };
 
-  const handleSave = async () => {
+  // Tanquem el popover immediatament (abans de l'await) per evitar que els
+  // re-renders provocats per setEntries al pare reobrin/repintin el Popover
+  // mentre s'esta animant el tancament. Si la crida falla, el pare ja mostra
+  // una notificacio d'error; l'usuari pot tornar a clicar la card per reintentar.
+  const handleSave = () => {
     if (draft === '' || draft === null || draft === undefined) return;
-    setSaving(true);
-    try {
-      await onSave(Number(draft));
-      onOpenChange(false);
-    } finally {
-      setSaving(false);
-    }
+    const qty = Number(draft);
+    onOpenChange(false);
+    onSave(qty).catch(() => { /* error ja notificat pel pare */ });
   };
 
   const handleEditName = () => {
@@ -128,7 +131,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
               type="button"
               size="xs"
               onClick={handleEditName}
-              disabled={saving}
             >
               Edita nom
             </Anchor>
@@ -145,10 +147,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
           />
           <Group grow>
-            <Button variant="default" onClick={handleClose} disabled={saving}>
+            <Button variant="default" onClick={handleClose}>
               Cancel·la
             </Button>
-            <Button color="indigo" onClick={handleSave} loading={saving}>
+            <Button color="indigo" onClick={handleSave}>
               Guarda
             </Button>
           </Group>

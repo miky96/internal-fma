@@ -27,7 +27,6 @@ const MainPage: React.FC = () => {
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
   const isInventari = currentUser?.email === 'inventarifma@gmail.com' || isAdmin;
   const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isInventari;
-  const isMarta = currentUser?.email === 'martafma@gmail.com' || isAdmin;
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
@@ -58,7 +57,7 @@ const MainPage: React.FC = () => {
           {isEconomia && (
             <NavLink label="Estadístiques" onClick={() => handleNavigation('stats')} />
           )}
-          {isMarta && (
+          {isAdmin && (
             <NavLink label="Editar Productes" onClick={() => handleNavigation('edit-product')} />
           )}
           <NavLink label="Log Out" onClick={() => signOut()} />
