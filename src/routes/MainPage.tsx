@@ -26,7 +26,7 @@ const MainPage: React.FC = () => {
 
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
   const isInventari = currentUser?.email === 'inventarifma@gmail.com' || isAdmin;
-  const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isInventari;
+  const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isAdmin;
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
