@@ -379,7 +379,8 @@ const AddTicket: React.FC = () => {
                     value={moneyReceived}
                     onChange={(val) => setMoneyReceived(val)}
                     decimalScale={2}
-                    thousandSeparator=","
+                    decimalSeparator=","
+                    thousandSeparator="."
                     hideControls
                     inputMode="decimal"
                     w={130}
