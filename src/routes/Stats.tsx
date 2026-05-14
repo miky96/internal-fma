@@ -18,7 +18,7 @@ import { formatEur } from '../components/tickets/KpiTile';
 // Paleta consistent: el primer any (mes recent) agafa indigo, el seguent teal, etc.
 const SERIES_COLORS = ['indigo', 'teal', 'orange', 'grape', 'blue', 'red'];
 
-const YEARS_BACK = 5;
+const YEARS_BACK = 1;
 
 const buildYearOptions = () => {
   const current = businessYear(new Date());
