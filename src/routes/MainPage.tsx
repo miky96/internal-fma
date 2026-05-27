@@ -1,17 +1,29 @@
-import React, { useContext } from 'react';
+import React, { Suspense, lazy, useContext } from 'react';
 import {
-  AppShell, Burger, Drawer, NavLink, Stack, Container, Box, Group,
+  AppShell, Burger, Drawer, NavLink, Stack, Container, Box, Group, Center, Loader,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
   Route, Routes, useNavigate, useLocation,
 } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import Inventory from './Inventory';
-import AddTicket from './AddTicket';
-import ViewTickets from './ViewTickets';
-import EditProduct from './EditProduct';
-import Stats from './Stats';
+
+// Code-splitting per ruta: cada vista es carrega només quan l'usuari hi navega.
+// Això redueix dràsticament el chunk inicial després del login, sobretot per
+// l'usuari "base" que només afegeix tickets i no necessita Stats, Inventory, etc.
+// La SDK de Firestore també queda fora del chunk inicial perquè només
+// l'importen aquestes rutes lazy.
+const Inventory = lazy(() => import('./Inventory'));
+const AddTicket = lazy(() => import('./AddTicket'));
+const ViewTickets = lazy(() => import('./ViewTickets'));
+const EditProduct = lazy(() => import('./EditProduct'));
+const Stats = lazy(() => import('./Stats'));
+
+const RouteFallback: React.FC = () => (
+  <Center mih="50vh">
+    <Loader />
+  </Center>
+);
 
 const MainPage: React.FC = () => {
   const [drawerOpen, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
@@ -66,13 +78,15 @@ const MainPage: React.FC = () => {
 
       <AppShell.Main>
         <Container size="lg">
-          <Routes>
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="add-ticket" element={<AddTicket />} />
-            <Route path="view-ticket" element={<ViewTickets />} />
-            <Route path="stats" element={<Stats />} />
-            <Route path="edit-product" element={<EditProduct />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="inventory" element={<Inventory />} />
+              <Route path="add-ticket" element={<AddTicket />} />
+              <Route path="view-ticket" element={<ViewTickets />} />
+              <Route path="stats" element={<Stats />} />
+              <Route path="edit-product" element={<EditProduct />} />
+            </Routes>
+          </Suspense>
         </Container>
         {location.pathname === '/mainpage' && (
           <Box
