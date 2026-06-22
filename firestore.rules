@@ -1,0 +1,91 @@
+rules_version = '2';
+
+// Regles de seguretat de Firestore per a internal-fma.
+//
+// L'autorització per rols al client (a MainPage.tsx i altres rutes) es basa
+// purament en l'email de l'usuari autenticat. Aquí repliquem aquesta lògica
+// al costat servidor: el client només és una conveniència d'UI, la veritat
+// la dicten aquestes regles.
+//
+// Convencions:
+//   - "deny by default": tot el que no estigui explícitament permès, no es pot.
+//   - Mai concedim accés a usuaris no autenticats.
+//   - El delete només l'autoritzem a admin (operació destructiva).
+//
+// Versionat: aquest fitxer es desplega des de CI (.github/workflows/firebase-deploy.yml).
+// Qualsevol canvi de regles ha de passar per PR.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------- Helpers ---------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function emailIs(addr) {
+      return isSignedIn() && request.auth.token.email == addr;
+    }
+
+    function isAdmin() {
+      return emailIs('adminfma@gmail.com');
+    }
+
+    function isInventari() {
+      return isAdmin() || emailIs('inventarifma@gmail.com');
+    }
+
+    function isEconomia() {
+      return isAdmin() || emailIs('economiafma@gmail.com');
+    }
+
+    // -------- Col·leccions ----------------------------------------------
+
+    // Productes del catàleg d'inventari.
+    // Llegits i creats des de la ruta /inventory (rol inventari).
+    match /products/{productId} {
+      allow read:   if isInventari();
+      allow create: if isInventari();
+      allow update: if isInventari();
+      allow delete: if isAdmin();
+    }
+
+    // Entrades d'inventari (moviments diaris).
+    // Gestionades íntegrament des de la ruta /inventory (rol inventari).
+    match /inventoryEntries/{entryId} {
+      allow read:   if isInventari();
+      allow create: if isInventari();
+      allow update: if isInventari();
+      allow delete: if isAdmin();
+    }
+
+    // Catàleg de productes que apareixen als tickets de venda.
+    // El llegeixen tots els usuaris autenticats perquè /add-ticket l'usa per
+    // poblar el formulari. Només admin els pot crear/modificar/esborrar
+    // (la pàgina /edit-product només és visible per admin).
+    match /ticket_products/{productId} {
+      allow read:   if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Tickets de venda.
+    // Els pot crear qualsevol usuari autenticat (la ruta /add-ticket és pública
+    // dins l'app). Els llegeix el rol economia (ViewTickets, Stats, DayView).
+    // L'esborrat només l'autoritzem a admin.
+    match /tickets/{ticketId} {
+      allow read:   if isEconomia();
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // -------- Deny by default -------------------------------------------
+    // Qualsevol altra ruta queda bloquejada explícitament.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

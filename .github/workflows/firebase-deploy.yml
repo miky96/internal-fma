@@ -45,12 +45,15 @@ jobs:
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-sa.json"
 
-      - name: Deploy hosting
+      # Desplega hosting + regles de Firestore en una mateixa passa.
+      # Mantenim "firestore:rules" (no "firestore" sencer) per no tocar els
+      # indexes, que de moment no estan versionats en aquest repo.
+      - name: Deploy hosting and Firestore rules
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
         run: |
           npx --yes firebase-tools deploy \
-            --only hosting \
+            --only hosting,firestore:rules \
             --project "${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
             --non-interactive
 
