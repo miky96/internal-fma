@@ -37,6 +37,7 @@ const DayView: React.FC = () => {
 
   const { currentUser } = useContext(AuthContext);
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
+  const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isAdmin;
 
   // Fetch del dia amb cleanup + timeout.
   //
@@ -190,7 +191,7 @@ const DayView: React.FC = () => {
             </Paper>
           </SimpleGrid>
 
-          {isAdmin && (
+          {isEconomia && (
             <Box w="100%">
               <Group justify="space-between" mb="xs" wrap="wrap">
                 <Title order={4}>

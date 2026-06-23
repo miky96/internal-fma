@@ -83,13 +83,13 @@ service cloud.firestore {
 
     // Tickets de venda.
     // Els pot crear qualsevol usuari autenticat (la ruta /add-ticket és pública
-    // dins l'app). Els llegeix el rol economia (ViewTickets, Stats, DayView).
-    // L'esborrat només l'autoritzem a admin.
+    // dins l'app). Els llegeix i esborra el rol economia (ViewTickets, Stats,
+    // DayView). L'esborrat l'autoritzem a economia (i admin, que hi està inclòs).
     match /tickets/{ticketId} {
       allow read:   if isEconomia();
       allow create: if isSignedIn();
       allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isEconomia();
     }
 
     // -------- Deny by default -------------------------------------------
