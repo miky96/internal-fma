@@ -13,13 +13,21 @@ import {
 import { db } from '../firebase/firestore';
 import ProductCard from '../components/inventory/ProductCard';
 import HistorySection from '../components/inventory/HistorySection';
-import { businessDayKey, todayBusinessDayKey } from '../components/inventory/businessDay';
+import ComparisonSection from '../components/inventory/ComparisonSection';
+import { buildEditions } from '../model/inventoryEdition';
+import {
+  businessDateKeyFromSeconds, todayBusinessDateKey, businessYear,
+} from '../model/businessDate';
 
 interface InventoryEntry {
   id: string;
   name: string;
   quantity: number;
   date: { seconds: number; nanoseconds: number };
+  // Camps afegits per poder comparar entre anys. Poden faltar en entrades
+  // antigues; en aquest cas es deriven de `date` en temps de lectura.
+  businessDate?: string; // 'YYYY-MM-DD' (dia de negoci, tall a les 5h)
+  year?: number;
 }
 
 interface Product {
@@ -31,16 +39,10 @@ interface Product {
 const showError = (message: string) => notifications.show({ color: 'red', message });
 const showOk = (message: string) => notifications.show({ color: 'green', message });
 
-// Esborra documents en lots de 400 per evitar el limit de 500 ops/batch a Firestore.
-const deleteEntriesInChunks = async (ids: string[]) => {
-  const CHUNK = 400;
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const slice = ids.slice(i, i + CHUNK);
-    const batch = writeBatch(db);
-    slice.forEach((id) => batch.delete(doc(db, 'inventoryEntries', id)));
-    await batch.commit();
-  }
-};
+// Dia de negoci (ISO) d'una entrada, derivant-lo de `date` si no està guardat.
+const entryBusinessDate = (e: InventoryEntry): string => (
+  e.businessDate ?? businessDateKeyFromSeconds(e.date.seconds)
+);
 
 const Inventory: React.FC = () => {
   const [entries, setEntries] = useState<InventoryEntry[]>([]);
@@ -67,24 +69,13 @@ const Inventory: React.FC = () => {
 
   useEffect(() => {
     const fetchEntries = async () => {
+      // Carreguem totes les entrades (tots els anys) per poder fer comparatives.
+      // Ja NO esborrem els anys anteriors: són justament les dades que volem
+      // conservar per a l'històric i la comparativa entre edicions.
       const q = query(collection(db, 'inventoryEntries'), orderBy('date'));
       const snap = await getDocs(q);
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as InventoryEntry[];
-      const currentYear = new Date().getFullYear();
-      const isCurrentYear = (e: InventoryEntry) => (
-        new Date(e.date.seconds * 1000).getFullYear() === currentYear
-      );
-      const current = all.filter(isCurrentYear);
-      const old = all.filter((e) => !isCurrentYear(e));
-      setEntries(current);
-      // Neteja en background de les entries d'altres anys.
-      if (old.length > 0) {
-        try {
-          await deleteEntriesInChunks(old.map((e) => e.id));
-        } catch (err) {
-          console.error('Error esborrant entries d\'anys anteriors:', err);
-        }
-      }
+      setEntries(all);
     };
     fetchEntries();
   }, []);
@@ -97,14 +88,15 @@ const Inventory: React.FC = () => {
     fetchProducts();
   }, []);
 
-  const todayKey = todayBusinessDayKey();
+  const todayKey = todayBusinessDateKey();
 
   const todayByProduct = useMemo(() => {
     const map = new Map<string, { id: string; quantity: number; updatedAt: Date }>();
     entries.forEach((e) => {
-      const d = new Date(e.date.seconds * 1000);
-      if (businessDayKey(d) === todayKey) {
-        map.set(e.name, { id: e.id, quantity: e.quantity, updatedAt: d });
+      if (entryBusinessDate(e) === todayKey) {
+        map.set(e.name, {
+          id: e.id, quantity: e.quantity, updatedAt: new Date(e.date.seconds * 1000),
+        });
       }
     });
     return map;
@@ -133,16 +125,18 @@ const Inventory: React.FC = () => {
     return out;
   }, [productsByCategory]);
 
-  const groupedEntries = useMemo(() => {
-    const out: { [date: string]: { [productName: string]: number } } = {};
-    entries.forEach((e) => {
-      const d = new Date(e.date.seconds * 1000);
-      const key = businessDayKey(d);
-      if (!out[key]) out[key] = {};
-      out[key][e.name] = e.quantity;
-    });
-    return out;
-  }, [entries]);
+  // Edicions (una per any) amb els dies indexats cronològicament.
+  const editions = useMemo(() => buildEditions(entries.map((e) => ({
+    name: e.name,
+    quantity: e.quantity,
+    businessDate: entryBusinessDate(e),
+  }))), [entries]);
+
+  const currentYear = businessYear(new Date());
+  const currentEdition = useMemo(
+    () => editions.find((ed) => ed.year === currentYear),
+    [editions, currentYear],
+  );
 
   useEffect(() => {
     if (!activeTab && categories.length > 0) setActiveTab(categories[0]);
@@ -176,12 +170,16 @@ const Inventory: React.FC = () => {
           name: productName,
           quantity: qty,
           date: serverTimestamp(),
+          businessDate: todayKey,
+          year: currentYear,
         });
         setEntries((prev) => [...prev, {
           id: ref.id,
           name: productName,
           quantity: qty,
           date: { seconds: Date.now() / 1000, nanoseconds: 0 },
+          businessDate: todayKey,
+          year: currentYear,
         }]);
       }
       showOk(`${productName}: ${qty}`);
@@ -426,9 +424,14 @@ const Inventory: React.FC = () => {
       )}
 
       <HistorySection
-        groupedEntries={groupedEntries}
+        edition={currentEdition}
         productNamesByCategory={productNamesByCategory}
         todayKey={todayKey}
+      />
+
+      <ComparisonSection
+        editions={editions}
+        productNamesByCategory={productNamesByCategory}
       />
 
       {/* Modal Nou producte: categoria fixa = pestanya activa */}
