@@ -39,6 +39,9 @@ const MainPage: React.FC = () => {
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
   const isInventari = currentUser?.email === 'inventarifma@gmail.com' || isAdmin;
   const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isAdmin;
+  // Rol "tickets" (ticketsfma@gmail.com): compte dedicat que només registra
+  // vendes. Sense permisos addicionals, veu únicament "Afegir Tickets", igual
+  // que qualsevol usuari base.
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
@@ -69,7 +72,7 @@ const MainPage: React.FC = () => {
           {isEconomia && (
             <NavLink label="Estadístiques" onClick={() => handleNavigation('stats')} />
           )}
-          {isAdmin && (
+          {isEconomia && (
             <NavLink label="Editar Productes" onClick={() => handleNavigation('edit-product')} />
           )}
           <NavLink label="Log Out" onClick={() => signOut()} />

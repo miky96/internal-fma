@@ -40,6 +40,14 @@ service cloud.firestore {
       return isAdmin() || emailIs('economiafma@gmail.com');
     }
 
+    // Rol "tickets": compte dedicat a registrar vendes. Només crea tickets,
+    // cap altre permís. Com que el create de tickets està obert a qualsevol
+    // usuari autenticat, aquest helper és documentació del rol i punt
+    // d'extensió si en el futur es vol restringir la creació.
+    function isTickets() {
+      return isAdmin() || emailIs('ticketsfma@gmail.com');
+    }
+
     // -------- Col·leccions ----------------------------------------------
 
     // Productes del catàleg d'inventari.
@@ -63,11 +71,13 @@ service cloud.firestore {
     // Catàleg de productes que apareixen als tickets de venda.
     // El llegeixen tots els usuaris autenticats perquè /add-ticket l'usa per
     // poblar el formulari. Només admin els pot crear/modificar/esborrar
-    // (la pàgina /edit-product només és visible per admin).
+    // (la pàgina /edit-product és visible per admin i economia).
+    // Admin pot crear/modificar/esborrar. Economia pot editar productes
+    // existents (tots els camps) però NO crear-ne ni esborrar-ne de nous.
     match /ticket_products/{productId} {
       allow read:   if isSignedIn();
       allow create: if isAdmin();
-      allow update: if isAdmin();
+      allow update: if isEconomia();
       allow delete: if isAdmin();
     }
 
