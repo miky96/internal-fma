@@ -83,6 +83,32 @@ describe('buildEdition', () => {
     expect(cervesa?.quantity).toBe(6);
   });
 
+  it('exposa unitats per producte i dia (sense Got)', () => {
+    const tickets: Ticket[] = [
+      mkTicket('a', '2025-07-25', 10, [
+        { name: 'Cervesa', quantity: 5 },
+        { name: 'Got', quantity: 99 },
+      ]),
+      mkTicket('b', '2025-07-25', 8, [
+        { name: 'Cervesa', quantity: 2 },
+        { name: 'Aigua', quantity: 3 },
+      ]),
+      mkTicket('c', '2025-07-26', 4, [
+        { name: 'Aigua', quantity: 1 },
+      ]),
+    ];
+    const edition = buildEdition(2025, tickets);
+
+    const day1 = edition.days[0]; // 2025-07-25
+    expect(day1.products.Cervesa).toBe(7); // 5 + 2
+    expect(day1.products.Aigua).toBe(3);
+    expect(day1.products.Got).toBeUndefined();
+
+    const day2 = edition.days[1]; // 2025-07-26
+    expect(day2.products.Aigua).toBe(1);
+    expect(day2.products.Cervesa).toBeUndefined();
+  });
+
   it('retorna edicio buida si no hi ha tickets', () => {
     const edition = buildEdition(2025, []);
     expect(edition.days).toEqual([]);
