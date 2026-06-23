@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import {
   Stack, Title, Paper, Group, MultiSelect, Center, Loader, SimpleGrid, Text, Box,
-  Tabs, ThemeIcon, Badge,
+  Tabs, ThemeIcon, Badge, Button,
 } from '@mantine/core';
 import {
   IconChartBar, IconChartLine, IconTable, IconTrophy, IconCalendarStats,
+  IconPackage,
 } from '@tabler/icons-react';
 import { businessYear } from '../model/businessDate';
 import { useYearTickets } from '../components/stats/useYearTickets';
@@ -29,9 +30,12 @@ const buildYearOptions = () => {
   return opts;
 };
 
+const formatUnits = (v: number) => `${Math.round(v).toLocaleString('ca-ES')} u.`;
+
 const Stats: React.FC = () => {
   const currentYear = businessYear(new Date());
   const [selectedYears, setSelectedYears] = useState<string[]>([String(currentYear)]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   const yearsNum = useMemo(
     () => selectedYears.map((s) => Number(s)).sort((a, b) => b - a),
@@ -63,6 +67,30 @@ const Stats: React.FC = () => {
     values: dayCategories.map((_, i) => e.days.find((d) => d.index === i + 1)?.avg ?? 0),
   }));
 
+  // Llista de productes disponibles segons els anys seleccionats.
+  const productOptions = useMemo(() => {
+    const set = new Set<string>();
+    editions.forEach((e) => e.days.forEach((d) => {
+      Object.keys(d.products).forEach((n) => set.add(n));
+    }));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ca'));
+  }, [editions]);
+
+  const allSelected = productOptions.length > 0
+    && selectedProducts.length === productOptions.length;
+
+  // Sèrie d'unitats venudes per dia: per cada any, la suma de les unitats dels
+  // productes triats a cada dia d'edició. Mateix format de dies/anys que la resta.
+  const unitsSeries = editions.map((e, idx) => ({
+    label: String(e.year),
+    color: SERIES_COLORS[idx % SERIES_COLORS.length],
+    values: dayCategories.map((_, i) => {
+      const day = e.days.find((d) => d.index === i + 1);
+      if (!day) return 0;
+      return selectedProducts.reduce((s, p) => s + (day.products[p] ?? 0), 0);
+    }),
+  }));
+
   // Per a la comparativa any vs any anterior als YearSummaryCard.
   const editionByYear: { [year: number]: typeof editions[number] } = {};
   editions.forEach((e) => { editionByYear[e.year] = e; });
@@ -75,7 +103,7 @@ const Stats: React.FC = () => {
             <IconCalendarStats size={22} />
           </ThemeIcon>
           <Stack gap={0}>
-            <Title order={2} lh={1.1}>Estadistiques</Title>
+            <Title order={2} lh={1.1}>Estadístiques</Title>
             <Text size="xs" c="dimmed">Comparativa per dia d&apos;edicio i top productes</Text>
           </Stack>
         </Group>
@@ -140,6 +168,9 @@ const Stats: React.FC = () => {
                 <Tabs.Tab value="avg" leftSection={<IconChartLine size={16} />}>
                   Ticket mig per dia
                 </Tabs.Tab>
+                <Tabs.Tab value="units" leftSection={<IconPackage size={16} />}>
+                  Unitats per producte
+                </Tabs.Tab>
                 <Tabs.Tab value="table" leftSection={<IconTable size={16} />}>
                   Taula comparativa
                 </Tabs.Tab>
@@ -161,6 +192,47 @@ const Stats: React.FC = () => {
                   formatValue={formatEur}
                   height={260}
                 />
+              </Tabs.Panel>
+
+              <Tabs.Panel value="units" p="md">
+                <Stack gap="sm">
+                  <Box style={{ maxWidth: 420 }}>
+                    <Group justify="space-between" align="center" mb={4}>
+                      <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                        Productes a comptar
+                      </Text>
+                      <Button
+                        variant="subtle"
+                        size="compact-xs"
+                        onClick={() => setSelectedProducts(allSelected ? [] : productOptions)}
+                        disabled={productOptions.length === 0}
+                      >
+                        {allSelected ? 'Treu tots' : 'Tots els productes'}
+                      </Button>
+                    </Group>
+                    <MultiSelect
+                      data={productOptions}
+                      value={selectedProducts}
+                      onChange={setSelectedProducts}
+                      placeholder="Tria un o mes productes"
+                      clearable
+                      searchable
+                      nothingFoundMessage="Cap producte"
+                    />
+                  </Box>
+                  {selectedProducts.length === 0 ? (
+                    <Text c="dimmed" size="sm">
+                      Selecciona almenys un producte per veure les unitats venudes per dia.
+                    </Text>
+                  ) : (
+                    <BarChart
+                      categories={dayCategories}
+                      series={unitsSeries}
+                      formatValue={formatUnits}
+                      height={260}
+                    />
+                  )}
+                </Stack>
               </Tabs.Panel>
 
               <Tabs.Panel value="table" p={0}>

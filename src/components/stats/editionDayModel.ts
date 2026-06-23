@@ -12,6 +12,7 @@ export interface EditionDay {
   total: number;            // facturació del dia
   ticketCount: number;      // nombre de tickets del dia
   avg: number;              // ticket mig del dia
+  products: { [name: string]: number }; // unitats venudes per producte aquell dia
 }
 
 export interface EditionSummary {
@@ -40,12 +41,15 @@ export const buildEdition = (year: number, tickets: Ticket[]): EditionSummary =>
   const days: EditionDay[] = chrono.map((d, i) => {
     const dayTickets = ticketsByDate[d.date] ?? [];
     const ticketCount = dayTickets.length;
+    // d.products inclou la clau 'totalMoney' (quirk d'aggregateByDay); la treiem.
+    const { totalMoney, ...products } = d.products as { [k: string]: number };
     return {
       index: i + 1,
       date: d.date,
       total: d.totalMoney,
       ticketCount,
       avg: ticketCount > 0 ? d.totalMoney / ticketCount : 0,
+      products,
     };
   });
 
