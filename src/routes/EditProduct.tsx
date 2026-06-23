@@ -26,6 +26,13 @@ const typeSelectData = Object.keys(ProductTypesNames).map((key) => {
 const EditProduct: React.FC = () => {
   const { currentUser } = useContext(AuthContext);
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
+  // Economia pot editar productes existents amb tots els camps (nom, preu,
+  // tipus, ordre), igual que admin, però NO pot afegir productes nous: això
+  // segueix sent exclusiu d'admin.
+  const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isAdmin;
+  const canEditProduct = isEconomia; // qui pot obrir el diàleg d'edició
+  const canEditAllFields = isEconomia; // qui pot editar tots els camps
+  const canAddProduct = isAdmin; // afegir productes: només admin
   const [products, setProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<string>(String(ProductTypes.BARRA));
 
@@ -206,26 +213,28 @@ const EditProduct: React.FC = () => {
                 {' €'}
               </span>
             </Box>
-            <Group
-              justify="center"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                pointerEvents: 'none',
-              }}
-            >
-              <ActionIcon
-                size={56}
-                radius="xl"
-                color="indigo"
-                variant="filled"
-                onClick={() => handleEditClick(product)}
-                aria-label="Edita producte"
-                style={{ pointerEvents: 'auto', opacity: 0.92 }}
+            {canEditProduct && (
+              <Group
+                justify="center"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                }}
               >
-                <IconEdit size={26} />
-              </ActionIcon>
-            </Group>
+                <ActionIcon
+                  size={56}
+                  radius="xl"
+                  color="indigo"
+                  variant="filled"
+                  onClick={() => handleEditClick(product)}
+                  aria-label="Edita producte"
+                  style={{ pointerEvents: 'auto', opacity: 0.92 }}
+                >
+                  <IconEdit size={26} />
+                </ActionIcon>
+              </Group>
+            )}
           </Paper>
         </Grid.Col>
       ))}
@@ -236,7 +245,7 @@ const EditProduct: React.FC = () => {
     <Stack mt="md" gap="md" w="100%">
       <Group justify="space-between" wrap="wrap">
         <Title order={2}>Editar Productes</Title>
-        {isAdmin && (
+        {canAddProduct && (
           <Button
             color="indigo"
             leftSection={<IconPlus size={16} />}
@@ -276,11 +285,13 @@ const EditProduct: React.FC = () => {
         size="md"
       >
         <Stack>
-          <TextInput
-            label="Nom del Producte"
-            value={editName}
-            onChange={(e) => setEditName(e.currentTarget.value)}
-          />
+          {canEditAllFields && (
+            <TextInput
+              label="Nom del Producte"
+              value={editName}
+              onChange={(e) => setEditName(e.currentTarget.value)}
+            />
+          )}
           <NumberInput
             label="Preu del Producte"
             value={editPrice}
@@ -288,20 +299,24 @@ const EditProduct: React.FC = () => {
             decimalScale={2}
             hideControls
           />
-          <Select
-            label="Tipus de producte"
-            data={typeSelectData}
-            value={String(editType)}
-            onChange={(val) => setEditType(Number(val) as ProductTypes)}
-          />
-          <NumberInput
-            label={`Ordre dins de ${ProductTypesNames[editType]}`}
-            description="Posicio a la pestanya. Els valors mes baixos surten primer."
-            value={editOrderId}
-            onChange={(val) => setEditOrderId(val ?? 0)}
-            min={0}
-            hideControls
-          />
+          {canEditAllFields && (
+            <Select
+              label="Tipus de producte"
+              data={typeSelectData}
+              value={String(editType)}
+              onChange={(val) => setEditType(Number(val) as ProductTypes)}
+            />
+          )}
+          {canEditAllFields && (
+            <NumberInput
+              label={`Ordre dins de ${ProductTypesNames[editType]}`}
+              description="Posicio a la pestanya. Els valors mes baixos surten primer."
+              value={editOrderId}
+              onChange={(val) => setEditOrderId(val ?? 0)}
+              min={0}
+              hideControls
+            />
+          )}
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={handleCloseEditDialog}>Cancel·lar</Button>
             <Button color="indigo" onClick={handleSaveEdit}>Guardar</Button>
