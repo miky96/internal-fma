@@ -26,12 +26,12 @@ const typeSelectData = Object.keys(ProductTypesNames).map((key) => {
 const EditProduct: React.FC = () => {
   const { currentUser } = useContext(AuthContext);
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
-  // Economia pot editar productes existents amb tots els camps (nom, preu,
+  // El rol org pot editar productes existents amb tots els camps (nom, preu,
   // tipus, ordre), igual que admin, però NO pot afegir productes nous: això
   // segueix sent exclusiu d'admin.
-  const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isAdmin;
-  const canEditProduct = isEconomia; // qui pot obrir el diàleg d'edició
-  const canEditAllFields = isEconomia; // qui pot editar tots els camps
+  const isOrg = currentUser?.email === 'orgfma@gmail.com' || isAdmin;
+  const canEditProduct = isOrg; // qui pot obrir el diàleg d'edició
+  const canEditAllFields = isOrg; // qui pot editar tots els camps
   const canAddProduct = isAdmin; // afegir productes: només admin
   const [products, setProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<string>(String(ProductTypes.BARRA));
