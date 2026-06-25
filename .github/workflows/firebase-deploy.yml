@@ -17,9 +17,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Node
+        # Fixat a Node 22 LTS expressament: Node 24 (.nvmrc) te una regressio
+        # HTTP (>=24.17) que provoca "Premature close" al bescanvi del token
+        # OAuth de googleapis durant el deploy de firebase-tools.
         uses: actions/setup-node@v4
         with:
-          node-version-file: ".nvmrc"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
