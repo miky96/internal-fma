@@ -25,9 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      # `npm run build` ja fa `tsc --noEmit && vite build`, així que typecheck
-      # i build van junts. La validació completa (lint + tests) viu al workflow
-      # de PR, que és el gate abans d'arribar a master.
+      # `npm run build` ja fa `tsc --noEmit && vite build`, aixi que typecheck
+      # i build van junts. La validacio completa (lint + tests) viu al workflow
+      # de PR, que es el gate abans d'arribar a master.
       - name: Build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -44,35 +44,34 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "::error::El secret FIREBASE_SERVICE_ACCOUNT no està definit o és buit." \
-                 "Comprova Settings > Secrets and variables > Actions del repo."
+            echo "::error::El secret FIREBASE_SERVICE_ACCOUNT no esta definit o es buit."
             exit 1
           fi
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-sa.json"
-          # Validació: ha de ser un JSON de service account amb client_email i private_key.
           node -e '
             const fs = require("fs");
             let sa;
             try { sa = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/gcp-sa.json", "utf8")); }
-            catch (e) { console.error("::error::El secret no és JSON vàlid: " + e.message); process.exit(1); }
+            catch (e) { console.error("::error::El secret no es JSON valid: " + e.message); process.exit(1); }
             if (sa.type !== "service_account" || !sa.client_email || !sa.private_key) {
-              console.error("::error::El JSON no sembla una clau de service account (falta type/client_email/private_key).");
+              console.error("::error::El JSON no sembla una clau de service account.");
               process.exit(1);
             }
             console.log("Service account OK: " + sa.client_email + " (project " + sa.project_id + ")");
           '
 
       # Desplega hosting + regles de Firestore en una mateixa passa.
-      # Mantenim "firestore:rules" (no "firestore" sencer) per no tocar els
-      # indexes, que de moment no estan versionats en aquest repo.
       - name: Deploy hosting and Firestore rules
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
         run: |
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS"
+          test -s "$GOOGLE_APPLICATION_CREDENTIALS" && echo "Fitxer de credencials present i no buit."
           npx --yes firebase-tools deploy \
             --only hosting,firestore:rules \
             --project "${{ secrets.VITE_FIREBASE_PROJECT_ID }}" \
-            --non-interactive
+            --non-interactive \
+            --debug
 
       - name: Cleanup credentials
         if: always()
