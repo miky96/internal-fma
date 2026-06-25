@@ -32,12 +32,10 @@ service cloud.firestore {
       return emailIs('adminfma@gmail.com');
     }
 
-    function isInventari() {
-      return isAdmin() || emailIs('inventarifma@gmail.com');
-    }
-
-    function isEconomia() {
-      return isAdmin() || emailIs('economiafma@gmail.com');
+    // Rol "org": compte únic (orgfma@gmail.com) que fusiona els antics rols
+    // inventari i economia. Té tots els permisos d'inventari + economia.
+    function isOrg() {
+      return isAdmin() || emailIs('orgfma@gmail.com');
     }
 
     // Rol "tickets": compte dedicat a registrar vendes. Només crea tickets,
@@ -51,45 +49,44 @@ service cloud.firestore {
     // -------- Col·leccions ----------------------------------------------
 
     // Productes del catàleg d'inventari.
-    // Llegits i creats des de la ruta /inventory (rol inventari).
+    // Llegits i creats des de la ruta /inventory (rol org).
     match /products/{productId} {
-      allow read:   if isInventari();
-      allow create: if isInventari();
-      allow update: if isInventari();
+      allow read:   if isOrg();
+      allow create: if isOrg();
+      allow update: if isOrg();
       allow delete: if isAdmin();
     }
 
     // Entrades d'inventari (moviments diaris).
-    // Gestionades íntegrament des de la ruta /inventory (rol inventari).
+    // Gestionades íntegrament des de la ruta /inventory (rol org).
     match /inventoryEntries/{entryId} {
-      allow read:   if isInventari();
-      allow create: if isInventari();
-      allow update: if isInventari();
+      allow read:   if isOrg();
+      allow create: if isOrg();
+      allow update: if isOrg();
       allow delete: if isAdmin();
     }
 
     // Catàleg de productes que apareixen als tickets de venda.
     // El llegeixen tots els usuaris autenticats perquè /add-ticket l'usa per
-    // poblar el formulari. Només admin els pot crear/modificar/esborrar
-    // (la pàgina /edit-product és visible per admin i economia).
-    // Admin pot crear/modificar/esborrar. Economia pot editar productes
-    // existents (tots els camps) però NO crear-ne ni esborrar-ne de nous.
+    // poblar el formulari. Admin pot crear/modificar/esborrar. El rol org pot
+    // editar productes existents (tots els camps) però NO crear-ne ni
+    // esborrar-ne de nous.
     match /ticket_products/{productId} {
       allow read:   if isSignedIn();
       allow create: if isAdmin();
-      allow update: if isEconomia();
+      allow update: if isOrg();
       allow delete: if isAdmin();
     }
 
     // Tickets de venda.
     // Els pot crear qualsevol usuari autenticat (la ruta /add-ticket és pública
-    // dins l'app). Els llegeix i esborra el rol economia (ViewTickets, Stats,
-    // DayView). L'esborrat l'autoritzem a economia (i admin, que hi està inclòs).
+    // dins l'app). Els llegeix i esborra el rol org (ViewTickets, Stats,
+    // DayView). L'esborrat l'autoritzem a org (i admin, que hi està inclòs).
     match /tickets/{ticketId} {
-      allow read:   if isEconomia();
+      allow read:   if isOrg();
       allow create: if isSignedIn();
       allow update: if isAdmin();
-      allow delete: if isEconomia();
+      allow delete: if isOrg();
     }
 
     // -------- Deny by default -------------------------------------------

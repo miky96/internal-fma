@@ -62,11 +62,10 @@ Els permisos es basen en l'email de l'usuari autenticat (lògica al client, a `M
 |---|---|---|
 | **admin** | `adminfma@gmail.com` | Tot |
 | **marta** | `martafma@gmail.com` | Afegir tickets + Editar productes |
-| **inventari** | `inventarifma@gmail.com` | Afegir tickets + Inventari |
-| **economia** | `economiafma@gmail.com` | Afegir tickets + Veure tickets + Estadístiques |
+| **org** | `orgfma@gmail.com` | Afegir tickets + Inventari + Veure tickets + Estadístiques + Editar productes (fusió d'inventari i economia) |
 | (base) | qualsevol altre | Només afegir tickets |
 
-Els rols són acumulatius: `admin` inclou tot, `inventari` inclou economia, etc.
+Els rols són acumulatius: `admin` inclou tot. El rol `org` fusiona els antics rols `inventari` i `economia` en un sol compte.
 
 ---
 

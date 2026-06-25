@@ -37,8 +37,8 @@ const MainPage: React.FC = () => {
   };
 
   const isAdmin = currentUser?.email === 'adminfma@gmail.com';
-  const isInventari = currentUser?.email === 'inventarifma@gmail.com' || isAdmin;
-  const isEconomia = currentUser?.email === 'economiafma@gmail.com' || isAdmin;
+  // Rol "org" (orgfma@gmail.com): fusió dels antics rols inventari i economia.
+  const isOrg = currentUser?.email === 'orgfma@gmail.com' || isAdmin;
   // Rol "tickets" (ticketsfma@gmail.com): compte dedicat que només registra
   // vendes. Sense permisos addicionals, veu únicament "Afegir Tickets", igual
   // que qualsevol usuari base.
@@ -62,17 +62,17 @@ const MainPage: React.FC = () => {
       >
         <Stack gap={0}>
           <NavLink label="Pàgina principal" onClick={() => handleNavigation('/mainpage')} />
-          {isInventari && (
+          {isOrg && (
             <NavLink label="Inventari" onClick={() => handleNavigation('inventory')} />
           )}
           <NavLink label="Afegir Tickets" onClick={() => handleNavigation('add-ticket')} />
-          {isEconomia && (
+          {isOrg && (
             <NavLink label="Veure Tickets" onClick={() => handleNavigation('view-ticket')} />
           )}
-          {isEconomia && (
+          {isOrg && (
             <NavLink label="Estadístiques" onClick={() => handleNavigation('stats')} />
           )}
-          {isEconomia && (
+          {isOrg && (
             <NavLink label="Editar Productes" onClick={() => handleNavigation('edit-product')} />
           )}
           <NavLink label="Log Out" onClick={() => signOut()} />
